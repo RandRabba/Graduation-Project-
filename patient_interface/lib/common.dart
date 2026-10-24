@@ -1,37 +1,172 @@
 import 'package:flutter/material.dart';
 
-/// Change this once to rebrand the whole UI.
+/// Change these once to rebrand the whole UI.
 const kAppName = 'Ottai';
+const kSensorName = 'Dexcom G7';
 
 class AppColors {
-  static const blue = Color(0xFF3B6EFF);
-  static const sky = Color(0xFF5AA2FF);
-  static const teal = Color(0xFF2FC4D8);
-  static const mint = Color(0xFF2CC6A4);
-  static const coral = Color(0xFFF2674F);
-  static const amber = Color(0xFFF5A623);
-  static const violet = Color(0xFF7C6CF0);
-  static const page = Color(0xFFF3F6FB);
-  static const tile = Color(0xFFF5F7FB);
-  static const ink = Color(0xFF1B2333);
-  static const muted = Color(0xFF6B7385);
-  static const inactive = Color(0xFFB4BAC6);
-  static const rangeBlue = Color(0xFFEAF2FF);
+  static const accent = Color(0xFF0B8A5A);
+  static const accentDark = Color(0xFF06684A);
+  static const accentSoft = Color(0xFFE3F2EA);
+  static const bg = Color(0xFFF6F7F5);
+  static const line = Color(0xFFE5E9E6);
+  static const ink = Color(0xFF15221C);
+  static const muted = Color(0xFF6A766F);
+  static const hint = Color(0xFFA7B0AA);
+  static const low = Color(0xFFE0564A);
+  static const high = Color(0xFFF0A020);
 }
 
-const brandGradient = LinearGradient(
-  begin: Alignment.centerLeft,
-  end: Alignment.centerRight,
-  colors: [AppColors.teal, AppColors.blue],
-);
+class AppText {
+  static const h1 = TextStyle(
+      fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.ink, letterSpacing: -0.6, height: 1.15);
+  static const h2 = TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.ink, letterSpacing: -0.2);
+  static const body = TextStyle(fontSize: 16, height: 1.4, color: AppColors.ink);
+  static const label = TextStyle(fontSize: 14, color: AppColors.muted);
+  static const value =
+      TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.ink, letterSpacing: -0.4);
+}
 
-const softShadow = [
-  BoxShadow(color: Color(0x143B6EFF), blurRadius: 24, offset: Offset(0, 8)),
-];
+/// Flat white card with a hairline border (no heavy shadows).
+class AppCard extends StatelessWidget {
+  const AppCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(20),
+    this.margin = const EdgeInsets.only(bottom: 14),
+    this.color = Colors.white,
+    this.bordered = true,
+    this.onTap,
+  });
+  final Widget child;
+  final EdgeInsets padding, margin;
+  final Color color;
+  final bool bordered;
+  final VoidCallback? onTap;
 
-/// Rounded square icon on a softly tinted background.
-class IconBubble extends StatelessWidget {
-  const IconBubble(this.icon, this.color, {super.key, this.size = 40});
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: margin,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          border: bordered ? Border.all(color: AppColors.line) : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
+        ),
+      );
+}
+
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.title, {super.key, this.action, this.onAction});
+  final String title;
+  final String? action;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Expanded(child: Text(title, style: AppText.h2)),
+        if (action != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accent,
+              minimumSize: const Size(0, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            child: Text(action!, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+      ]);
+}
+
+/// A label with a big value underneath ("--" until real data arrives).
+class Stat extends StatelessWidget {
+  const Stat(this.label, {super.key, this.value = '--', this.unit, this.compact = false});
+  final String label;
+  final String value;
+  final String? unit;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: AppText.label),
+          const SizedBox(height: 6),
+          Text.rich(TextSpan(children: [
+            TextSpan(text: value, style: AppText.value.copyWith(fontSize: compact ? 20 : 26)),
+            if (unit != null) TextSpan(text: ' $unit', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+          ])),
+        ],
+      );
+}
+
+/// Stats side by side, separated by thin vertical lines.
+class StatRow extends StatelessWidget {
+  const StatRow(this.children, {super.key});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(horizontal: 14), color: AppColors.line),
+            Expanded(child: children[i]),
+          ],
+        ]),
+      );
+}
+
+/// Segmented pill selector (used for 1D/7D/... and Quick/Smart).
+class PillTabs extends StatelessWidget {
+  const PillTabs({super.key, required this.labels, required this.index, required this.onChanged});
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(color: const Color(0xFFE9EEEB), borderRadius: BorderRadius.circular(24)),
+        child: Row(children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: i == index ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: i == index
+                        ? const [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))]
+                        : null,
+                  ),
+                  child: Text(
+                    labels[i],
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: i == index ? AppColors.ink : AppColors.muted,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ]),
+      );
+}
+
+class IconCircle extends StatelessWidget {
+  const IconCircle(this.icon, {super.key, this.color = AppColors.accent, this.size = 44});
   final IconData icon;
   final Color color;
   final double size;
@@ -41,152 +176,84 @@ class IconBubble extends StatelessWidget {
         width: size,
         height: size,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color.withAlpha(32),
-          borderRadius: BorderRadius.circular(size * .32),
-        ),
-        child: Icon(icon, color: color, size: size * .55),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color.withAlpha(28)),
+        child: Icon(icon, color: color, size: size * .5),
       );
 }
 
-/// White rounded card with an icon, a title and an optional trailing widget.
-class SectionCard extends StatelessWidget {
-  const SectionCard({
-    super.key,
-    required this.title,
-    required this.child,
-    this.icon,
-    this.accent = AppColors.blue,
-    this.trailing,
-  });
-  final String title;
-  final Widget child;
-  final IconData? icon;
-  final Color accent;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: softShadow,
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            if (icon != null) ...[
-              IconBubble(icon!, accent, size: 38),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Text(title,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.ink)),
-            ),
-            if (trailing != null) trailing!,
-          ]),
-          const SizedBox(height: 16),
-          child,
-        ]),
-      );
-}
-
-/// Soft grey tile with a label and a value ("--" until real data arrives).
-class StatTile extends StatelessWidget {
-  const StatTile(
-    this.label, {
-    super.key,
-    this.value = '--',
-    this.unit,
-    this.icon,
-    this.color = AppColors.blue,
-    this.info = false,
-  });
+class StatusPill extends StatelessWidget {
+  const StatusPill(this.label, this.color, {super.key, this.onDark = false});
   final String label;
-  final String value;
-  final String? unit;
-  final IconData? icon;
   final Color color;
-  final bool info;
+  final bool onDark;
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: AppColors.tile, borderRadius: BorderRadius.circular(18)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            if (icon != null) ...[
-              IconBubble(icon!, color, size: 26),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Text(label,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.muted)),
-            ),
-            if (info)
-              const Padding(
-                padding: EdgeInsets.only(left: 4),
-                child: Icon(Icons.info_outline_rounded, size: 14, color: AppColors.inactive),
-              ),
-          ]),
-          const SizedBox(height: 10),
-          Text.rich(TextSpan(children: [
-            TextSpan(
-              text: value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink),
-            ),
-            if (unit != null)
-              TextSpan(text: ' $unit', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
-          ])),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: onDark ? const Color(0x26FFFFFF) : color.withAlpha(30),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+          const SizedBox(width: 7),
+          Text(label,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: onDark ? Colors.white : color)),
         ]),
       );
 }
 
-/// A row of equally wide tiles.
-Widget tileRow(List<Widget> tiles) => Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(children: [
-        for (var i = 0; i < tiles.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
-          Expanded(child: tiles[i]),
-        ],
-      ]),
-    );
-
-/// Full-width gradient call-to-action button.
-class GradientButton extends StatelessWidget {
-  const GradientButton({super.key, required this.label, required this.onTap, this.icon});
+/// Big pill-shaped main action. Pass null to disable.
+class PrimaryButton extends StatelessWidget {
+  const PrimaryButton(this.label, {super.key, required this.onPressed, this.icon});
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onPressed;
   final IconData? icon;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          gradient: brandGradient,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [BoxShadow(color: Color(0x553B6EFF), blurRadius: 20, offset: Offset(0, 10))],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: onTap,
-            child: SizedBox(
-              height: 58,
-              width: double.infinity,
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                if (icon != null) ...[
-                  Icon(icon, color: Colors.white, size: 22),
-                  const SizedBox(width: 10),
-                ],
-                Text(label,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-              ]),
-            ),
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.line,
+            shape: const StadiumBorder(),
+            textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
           ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
+            Text(label),
+          ]),
+        ),
+      );
+}
+
+/// Quieter secondary action.
+class SoftButton extends StatelessWidget {
+  const SoftButton(this.label, {super.key, required this.onPressed, this.icon});
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accentSoft,
+            foregroundColor: AppColors.accentDark,
+            shape: const StadiumBorder(),
+            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
+            Text(label),
+          ]),
         ),
       );
 }
