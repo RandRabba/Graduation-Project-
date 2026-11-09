@@ -5,7 +5,7 @@ import '../../theme/app_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_switch.dart';
-import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/toast.dart';
 
 class _PrefItem {
@@ -16,9 +16,8 @@ class _PrefItem {
   final String? noteKey;
 }
 
-/// Notification preferences. Critical alerts are always on. The other
-/// switches exist for Extended monitoring only. This screen stores the
-/// preferences; delivery is the backend's job.
+/// Notification preferences. Critical alerts are always on. This screen
+/// stores the preferences; delivery is the backend's job.
 class NotificationPrefsScreen extends StatelessWidget {
   const NotificationPrefsScreen({super.key});
 
@@ -30,21 +29,17 @@ class NotificationPrefsScreen extends StatelessWidget {
 
     final List<_PrefItem> items = <_PrefItem>[
       const _PrefItem('crit', 'nCrit', 'nCritNote'),
-      if (c.isExtended) ...const <_PrefItem>[
-        _PrefItem('high', 'nHigh', null),
-        _PrefItem('low', 'nLow', null),
-        _PrefItem('rep', 'nRep', null),
-        _PrefItem('rem', 'nRem', null),
-      ],
+      const _PrefItem('high', 'nHigh', null),
+      const _PrefItem('low', 'nLow', null),
+      const _PrefItem('rep', 'nRep', null),
+      const _PrefItem('rem', 'nRem', null),
     ];
 
-    return PageFrame(
+    return SubPage(
+      title: s.t('notifPref'),
       children: <Widget>[
-        const BackRow(),
-        ScreenTitle(s.t('notifPref')),
-        const SizedBox(height: 14),
         AppCard(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: CgGap.lg, vertical: 4),
           child: Column(
             children: <Widget>[
               for (int i = 0; i < items.length; i++)

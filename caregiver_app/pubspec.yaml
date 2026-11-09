@@ -4,8 +4,9 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.5.0 <4.0.0'
-  flutter: '>=3.24.0'
+  # Same SDK as the Patient app, whose theme this module now mirrors (it uses
+  # DialogThemeData and other recent Material APIs).
+  sdk: ^3.10.7
 
 dependencies:
   flutter:
@@ -13,7 +14,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_svg: ^2.0.10+1
-  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:

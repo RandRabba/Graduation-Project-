@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../state/caregiver_scope.dart';
 import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import 'app_card.dart';
 import 'app_icon.dart';
@@ -17,7 +18,6 @@ Future<void> _showSheet(BuildContext context, WidgetBuilder builder) {
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x8C071525),
     elevation: 0,
     builder: builder,
   );
@@ -42,7 +42,7 @@ class _SheetShell extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(20, 22, 20, 26 + bottom),
         decoration: BoxDecoration(
           color: pal.card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
         ),
         child: SingleChildScrollView(child: child),
       ),
@@ -212,10 +212,75 @@ class _DisconnectSheet extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Appearance (System / Light / Dark), same choices as the Patient app
+// ---------------------------------------------------------------------------
+
+/// Bottom sheet to pick System, Light or Dark.
+Future<void> showThemeSheet(BuildContext context) {
+  return _showSheet(context, (BuildContext sheetContext) => const _ThemeSheet());
+}
+
+class _ThemeSheet extends StatelessWidget {
+  const _ThemeSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.cg;
+    final pal = context.pal;
+    final s = c.strings;
+    final List<(ThemeMode, String)> options = <(ThemeMode, String)>[
+      (ThemeMode.system, s.t('themeSys')),
+      (ThemeMode.light, s.t('themeLight')),
+      (ThemeMode.dark, s.t('themeDark')),
+    ];
+
+    return _SheetShell(
+      label: s.t('appearance'),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(s.t('appearance'), style: context.hStyle(18)),
+          const SizedBox(height: 8),
+          for (final (ThemeMode mode, String name) in options)
+            Semantics(
+              button: true,
+              selected: c.themeMode == mode,
+              label: name,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+                onTap: () {
+                  context.cgRead.setThemeMode(mode);
+                  Navigator.of(context).pop();
+                },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 52),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: ExcludeSemantics(
+                          child: Text(name, style: context.bodyStyle(15, FontWeight.w600)),
+                        ),
+                      ),
+                      if (c.themeMode == mode) Icon(Icons.check_rounded, color: pal.pri),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 6),
+          _SheetTextButton(label: s.t('close'), onTap: () => Navigator.of(context).pop()),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Demo controls (prototype only)
 // ---------------------------------------------------------------------------
 
-/// Opens the demo controls: access level, theme, language and data states.
+/// Opens the demo controls: theme, language, data states and login role.
 /// Only reachable when `showDemoControls` is true. Text is English-only on
 /// purpose: it is developer tooling and is removed in the integrated app.
 Future<void> showDemoSheet(BuildContext context) {
@@ -246,27 +311,19 @@ class _DemoSheet extends StatelessWidget {
             Text('Prototype controls', style: context.hStyle(18)),
             const SizedBox(height: 6),
             Text(
-              'Mock data for demonstration only. In the real app the access level '
-              'comes from the backend, and restricted data is never sent to the device.',
+              'Mock data for demonstration only. In the real app everything comes '
+              'from the backend for the patient who added this caregiver.',
               style: context.subStyle(12.5),
             ),
-            label('Access level (set by the patient)'),
-            SegmentedBar<AccessLevel>(
-              options: <SegmentOption<AccessLevel>>[
-                SegmentOption<AccessLevel>(AccessLevel.basic, 'Basic'),
-                SegmentOption<AccessLevel>(AccessLevel.extended, 'Extended'),
-              ],
-              selected: c.level,
-              onChanged: c.setLevel,
-            ),
             label('Theme'),
-            SegmentedBar<bool>(
-              options: <SegmentOption<bool>>[
-                SegmentOption<bool>(false, 'Light'),
-                SegmentOption<bool>(true, 'Dark'),
+            SegmentedBar<ThemeMode>(
+              options: <SegmentOption<ThemeMode>>[
+                SegmentOption<ThemeMode>(ThemeMode.system, 'System'),
+                SegmentOption<ThemeMode>(ThemeMode.light, 'Light'),
+                SegmentOption<ThemeMode>(ThemeMode.dark, 'Dark'),
               ],
-              selected: c.dark,
-              onChanged: c.setDark,
+              selected: c.themeMode,
+              onChanged: c.setThemeMode,
             ),
             label('Language and direction'),
             SegmentedBar<bool>(
@@ -292,19 +349,6 @@ class _DemoSheet extends StatelessWidget {
               ],
               selected: c.dataState,
               onChanged: c.setDataState,
-            ),
-            label('Invitation state (sign-in flow)'),
-            ChoicePills<InvitationState>(
-              outlined: true,
-              options: <SegmentOption<InvitationState>>[
-                SegmentOption<InvitationState>(InvitationState.pending, 'Pending'),
-                SegmentOption<InvitationState>(InvitationState.expired, 'Expired'),
-                SegmentOption<InvitationState>(InvitationState.declined, 'Declined'),
-                SegmentOption<InvitationState>(InvitationState.revoked, 'Revoked'),
-                SegmentOption<InvitationState>(InvitationState.accepted, 'Accepted'),
-              ],
-              selected: c.invitation,
-              onChanged: c.setInvitation,
             ),
             label('Role returned after login'),
             SegmentedBar<bool>(

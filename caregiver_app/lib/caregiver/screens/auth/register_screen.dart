@@ -4,13 +4,23 @@ import 'package:flutter/services.dart';
 import '../../state/caregiver_scope.dart';
 import '../../theme/app_palette.dart';
 import '../../theme/text_styles.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_icon.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/buttons.dart';
 import 'auth_frame.dart';
-import 'verify_email_screen.dart';
+import 'session_routes.dart';
 
-/// Caregiver registration. The email is pre-filled with the address the
-/// patient invited, as in the prototype.
+/// Caregiver registration.
+///
+/// The patient adds the caregiver by email only (from the Patient app). The
+/// caregiver then registers here with that same email, chooses a password,
+/// confirms it and goes straight into the app: no email verification and no
+/// invitation step.
+///
+/// The "is this email invited?" check is done against the repository in the
+/// prototype. In production the backend must make it (a pending caregiver
+/// link has to exist for the email) and answer with an error otherwise.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -19,8 +29,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _name = TextEditingController();
-  final TextEditingController _email = TextEditingController(text: 'nour.haddad@example.com');
+  final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
 
@@ -28,8 +37,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _errorKey;
 
   @override
+  void initState() {
+    super.initState();
+    // Demo convenience only: the invited address is filled in for the review.
+    final c = context.cgRead;
+    if (c.showDemoControls) _email.text = c.repository.invitedEmail;
+  }
+
+  @override
   void dispose() {
-    _name.dispose();
     _email.dispose();
     _password.dispose();
     _confirm.dispose();
@@ -37,10 +53,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _register() {
-    final String name = _name.text.trim();
     final String email = _email.text.trim();
-    if (name.isEmpty || email.isEmpty || _password.text.isEmpty || _confirm.text.isEmpty) {
+    if (email.isEmpty || _password.text.isEmpty || _confirm.text.isEmpty) {
       setState(() => _errorKey = 'errFill');
+      return;
+    }
+    if (email.toLowerCase() != context.cgRead.repository.invitedEmail.toLowerCase()) {
+      setState(() => _errorKey = 'errNoInvite');
       return;
     }
     if (_password.text.length < 8) {
@@ -52,11 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
     setState(() => _errorKey = null);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext _) => VerifyEmailScreen(email: email),
-      ),
-    );
+    openDashboard(context);
   }
 
   @override
@@ -73,17 +88,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Semantics(header: true, child: Text(s.t('regT'), style: context.hStyle(26))),
             const SizedBox(height: 4),
             Text(s.t('regSub'), style: context.subStyle(14)),
-            AppTextField(
-              label: s.t('fName'),
-              controller: _name,
-              topSpacing: 12,
-              autofillHints: const <String>[AutofillHints.name],
-              textInputAction: TextInputAction.next,
+            const SizedBox(height: 16),
+            AppCard(
+              color: pal.soft,
+              shadow: false,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: AppIcon(AppIcons.shield, color: pal.pri),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(s.t('regNote'), style: context.bodyStyle(13))),
+                ],
+              ),
             ),
             AppTextField(
               label: s.t('fEmail'),
               controller: _email,
-              topSpacing: 12,
+              topSpacing: 16,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const <String>[AutofillHints.email],
               textInputAction: TextInputAction.next,

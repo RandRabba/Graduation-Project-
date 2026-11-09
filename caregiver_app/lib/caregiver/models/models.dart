@@ -15,6 +15,10 @@ class LocalizedText {
 }
 
 /// Monitoring level chosen by the patient. Never chosen by the caregiver.
+///
+/// The caregiver app currently shows ONE fixed set of read-only screens, so
+/// the UI no longer branches on this. The type is kept so the repository can
+/// still enforce a tier on the server side if the product brings tiers back.
 enum AccessLevel { basic, extended }
 
 /// Colour tone used for chips and status styling.
@@ -31,8 +35,6 @@ enum DataState {
   revoked,
   noPatient,
 }
-
-enum InvitationState { pending, accepted, declined, expired, revoked }
 
 enum PatientStatus { normal, controlled, critical }
 
@@ -174,12 +176,24 @@ class RangeStats {
   const RangeStats({
     required this.average,
     required this.inRangePercent,
+    required this.lowPercent,
+    required this.highPercent,
+    required this.lowest,
+    required this.highest,
     required this.count,
     required this.trend,
   });
 
   final int average;
+
+  /// Time in range split, in percent. The three values add up to 100.
   final int inRangePercent;
+  final int lowPercent;
+  final int highPercent;
+
+  /// Lowest and highest reading in the range, in mg/dL.
+  final int lowest;
+  final int highest;
   final int count;
   final LocalizedText trend;
 }

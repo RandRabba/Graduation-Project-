@@ -11,6 +11,7 @@ import '../../widgets/app_icon.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/lock_note.dart';
 import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/sheets.dart';
 import '../../widgets/state_view.dart';
 
@@ -35,10 +36,9 @@ class AlertDetailScreen extends StatelessWidget {
     }
 
     if (alert == null) {
-      return PageFrame(
+      return SubPage(
+        title: s.t('tAlerts'),
         children: <Widget>[
-          const BackRow(),
-          const SizedBox(height: 16),
           AppCard(
             child: Text(s.t('notVis'), textAlign: TextAlign.center, style: context.subStyle(13.5)),
           ),
@@ -51,11 +51,10 @@ class AlertDetailScreen extends StatelessWidget {
     final bool crit = a.isCritical;
     final bool showEmergency = crit || a.kind == AlertKind.low;
 
-    return PageFrame(
+    return SubPage(
+      title: s.t('tAlerts'),
       children: <Widget>[
-        const BackRow(),
         Container(
-          margin: const EdgeInsets.only(top: 4),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: crit ? pal.critBg : pal.card,

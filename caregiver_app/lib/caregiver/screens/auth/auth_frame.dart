@@ -78,7 +78,7 @@ class AuthFrame extends StatelessWidget {
   }
 }
 
-/// Large round icon used on the verify, accepted, ended and stub screens.
+/// Large round icon used on the patient-role stub screen.
 class StatusCircle extends StatelessWidget {
   const StatusCircle({
     super.key,

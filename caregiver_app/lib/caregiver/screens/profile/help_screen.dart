@@ -4,7 +4,7 @@ import '../../state/caregiver_scope.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/buttons.dart';
-import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/toast.dart';
 
 /// Help and support: three common questions and a contact button.
@@ -29,11 +29,10 @@ class HelpScreen extends StatelessWidget {
           ),
         );
 
-    return PageFrame(
+    return SubPage(
+      title: s.t('helpT'),
       children: <Widget>[
-        const BackRow(),
-        ScreenTitle(s.t('helpT')),
-        faq('h1', 'h1b', 14),
+        faq('h1', 'h1b', 0),
         faq('h2', 'h2b', 10),
         faq('h3', 'h3b', 10),
         const SizedBox(height: 14),

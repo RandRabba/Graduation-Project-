@@ -35,3 +35,10 @@ String agoLabel(DateTime t, AppStrings s) {
 
 /// Classification text with its non-colour glyph, e.g. "↑ High".
 String classLabel(GlucoseClass c, AppStrings s) => '${c.glyph}${s.t(c.key)}';
+
+/// String-table key and colour tone for a patient's overall status.
+(String, Tone) patientStatusStyle(PatientStatus status) => switch (status) {
+      PatientStatus.normal => ('stNormal', Tone.ok),
+      PatientStatus.controlled => ('stCtl', Tone.ctl),
+      PatientStatus.critical => ('stCrit', Tone.crit),
+    };

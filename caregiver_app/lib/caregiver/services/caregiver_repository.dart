@@ -11,6 +11,11 @@ abstract class CaregiverRepository {
 
   CaregiverProfile get caregiver;
 
+  /// The email address the patient added as a caregiver. Registration is only
+  /// allowed for this address. In production the backend makes this check
+  /// (a pending caregiver link must exist for the email) and returns an error.
+  String get invitedEmail;
+
   /// Latest reading, or null when the patient has none.
   GlucoseReading? latestReading({required bool stale});
 

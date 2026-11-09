@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import 'app_icon.dart';
 
-/// Rounded white (or dark navy) card with the soft shadow from the design.
+/// Rounded surface with a hairline border and a soft shadow, same look as the
+/// Patient app's `AppCard`. Pass [borderColor] to emphasise a card (for example
+/// a critical alert); otherwise the hairline uses the palette's `line` colour.
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -15,9 +18,10 @@ class AppCard extends StatelessWidget {
     this.onTap,
     this.borderColor,
     this.borderWidth = 1.5,
-    this.radius = 20,
+    this.radius = AppRadii.lg,
     this.shadow = true,
     this.semanticLabel,
+    this.gradient,
   });
 
   final Widget child;
@@ -31,6 +35,10 @@ class AppCard extends StatelessWidget {
   final bool shadow;
   final String? semanticLabel;
 
+  /// Fills the card with a gradient (the dark "hero" cards). The hairline
+  /// border is dropped, like in the Patient app.
+  final Gradient? gradient;
+
   @override
   Widget build(BuildContext context) {
     final pal = context.pal;
@@ -42,10 +50,15 @@ class AppCard extends StatelessWidget {
     Widget card = Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: color ?? pal.card,
+        color: gradient == null ? (color ?? pal.card) : null,
+        gradient: gradient,
         borderRadius: br,
         boxShadow: shadow ? pal.shadows : null,
-        border: borderColor == null ? null : Border.all(color: borderColor!, width: borderWidth),
+        border: gradient != null
+            ? null
+            : borderColor == null
+                ? Border.all(color: pal.line)
+                : Border.all(color: borderColor!, width: borderWidth),
       ),
       child: Material(
         type: MaterialType.transparency,

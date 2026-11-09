@@ -55,7 +55,7 @@ class _MessageView extends StatelessWidget {
         c.setDataState(DataState.noPatient);
         break;
       case DataState.noPatient:
-        showToast(context, s.t('noInv'), aboveNav: true);
+        showToast(context, s.t('noNew'), aboveNav: true);
         break;
       default:
         break;

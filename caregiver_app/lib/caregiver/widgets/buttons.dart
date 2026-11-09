@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_palette.dart';
 import 'app_icon.dart';
 
-/// Filled primary button (navy in light mode, cyan in dark mode).
+/// Pill-shaped main action, same look as the Patient app's `PrimaryButton`:
+/// the call-to-action gradient with a soft glow. Pass [background] for a solid
+/// colour (for example the emergency red). Pass a null [onPressed] to disable.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -12,7 +14,7 @@ class PrimaryButton extends StatelessWidget {
     this.icon,
     this.background,
     this.foreground,
-    this.minHeight = 52,
+    this.minHeight = 56,
   });
 
   final String label;
@@ -25,35 +27,53 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pal = context.pal;
-    final fg = foreground ?? pal.onPri;
-    final br = BorderRadius.circular(14);
+    final bool enabled = onPressed != null;
+    final bool gradient = background == null && enabled;
+    final fg = enabled ? (foreground ?? pal.onPri) : pal.sub;
+    final br = BorderRadius.circular(999);
     return SizedBox(
       width: double.infinity,
-      child: Material(
-        color: background ?? pal.pri,
-        borderRadius: br,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onPressed,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: minHeight),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  if (icon != null) ...<Widget>[
-                    AppIcon(icon!, color: fg),
-                    const SizedBox(width: 8),
-                  ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: fg, fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: background ?? (enabled ? null : pal.line),
+          gradient: gradient ? pal.cta : null,
+          borderRadius: br,
+          boxShadow: gradient
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: pal.ctaEnd.withAlpha(70),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
                   ),
-                ],
+                ]
+              : null,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: br,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: minHeight),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    if (icon != null) ...<Widget>[
+                      AppIcon(icon!, color: fg),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: fg, fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -89,7 +109,7 @@ class OutlineAppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final fg = color ?? pal.text;
-    final br = BorderRadius.circular(14);
+    final br = BorderRadius.circular(999);
     return SizedBox(
       width: double.infinity,
       child: Container(
@@ -189,7 +209,7 @@ class EmergencyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final fg = solid ? Colors.white : pal.crit;
-    final br = BorderRadius.circular(compact ? 14 : 16);
+    final br = BorderRadius.circular(999);
     return SizedBox(
       width: double.infinity,
       child: Container(

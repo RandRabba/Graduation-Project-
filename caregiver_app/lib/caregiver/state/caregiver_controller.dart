@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 
 import '../l10n/app_strings.dart';
 import '../models/models.dart';
@@ -8,7 +9,8 @@ import '../services/mock_caregiver_repository.dart';
 /// Single source of truth for the Caregiver module (UI state and data access).
 ///
 /// All reads of patient data go through [repository] with the current
-/// [level], so restricted data is never loaded for a Basic caregiver.
+/// [level] (fixed to extended: the caregiver sees one read-only set of
+/// screens, see [AccessLevel]).
 class CaregiverController extends ChangeNotifier {
   CaregiverController({
     CaregiverRepository? repository,
@@ -18,7 +20,7 @@ class CaregiverController extends ChangeNotifier {
 
   final CaregiverRepository repository;
 
-  /// Shows the prototype controls (access level, theme, data states...).
+  /// Shows the prototype controls (theme, language, data states...).
   /// Turn off in the integrated app.
   final bool showDemoControls;
 
@@ -32,19 +34,16 @@ class CaregiverController extends ChangeNotifier {
 
   // ---- Session and appearance -------------------------------------------
   AccessLevel _level = AccessLevel.extended;
-  bool _dark = false;
+  /// Follows the device by default, like the Patient app.
+  ThemeMode _themeMode = ThemeMode.system;
   bool _arabic = false;
   DataState _dataState = DataState.normal;
-  InvitationState _invitation = InvitationState.pending;
   bool _roleIsPatient = false;
 
   AccessLevel get level => _level;
-  bool get isExtended => _level == AccessLevel.extended;
-  bool get isBasic => !isExtended;
-  bool get dark => _dark;
+  ThemeMode get themeMode => _themeMode;
   bool get arabic => _arabic;
   DataState get dataState => _dataState;
-  InvitationState get invitation => _invitation;
 
   /// Demo only: pretend the backend returned the PATIENT role after login.
   bool get roleIsPatient => _roleIsPatient;
@@ -153,8 +152,9 @@ class CaregiverController extends ChangeNotifier {
   }
 
   // ---- Setters used by settings and demo controls -------------------------
-  void setDark(bool v) {
-    _dark = v;
+  void setThemeMode(ThemeMode v) {
+    if (v == _themeMode) return;
+    _themeMode = v;
     notifyListeners();
   }
 
@@ -163,8 +163,7 @@ class CaregiverController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Demo only. In the real app the level is set by the patient and comes
-  /// from the backend.
+  /// Kept for a future tiered product. No screen calls it today.
   void setLevel(AccessLevel v) {
     _level = v;
     _tabIndex = 0;
@@ -174,11 +173,6 @@ class CaregiverController extends ChangeNotifier {
 
   void setDataState(DataState v) {
     _dataState = v;
-    notifyListeners();
-  }
-
-  void setInvitation(InvitationState v) {
-    _invitation = v;
     notifyListeners();
   }
 

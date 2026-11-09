@@ -8,17 +8,14 @@ import '../../utils/formatters.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/glucose_chart.dart';
-import '../../widgets/latest_glucose_card.dart';
 import '../../widgets/lock_note.dart';
 import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/segmented.dart';
 import '../../widgets/state_view.dart';
-import '../profile/privacy_screen.dart';
-import '../reports/reports_screen.dart';
-import '../routes.dart';
 
-/// Readings tab. Basic caregivers see only the latest reading and a
-/// "not shared" card. Extended caregivers get the chart, filters and history.
+/// Readings tab: the patient's glucose history. Read-only. There is no way to
+/// add or edit a reading from the caregiver app.
 class ReadingsScreen extends StatelessWidget {
   const ReadingsScreen({super.key});
 
@@ -29,75 +26,8 @@ class ReadingsScreen extends StatelessWidget {
 
     final pal = context.pal;
     final s = c.strings;
-
-    return PageFrame(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(child: ScreenTitle(s.t('tRead'))),
-            if (c.isExtended)
-              Semantics(
-                button: true,
-                label: s.t('reportsL'),
-                excludeSemantics: true,
-                onTap: () => pushScreen(context, const ReportsScreen()),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: pal.shadows,
-                  ),
-                  child: Material(
-                    color: pal.card,
-                    shape: const StadiumBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => pushScreen(context, const ReportsScreen()),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            AppIcon(AppIcons.file, size: 16, color: pal.sec),
-                            const SizedBox(width: 5),
-                            Text(
-                              s.t('reportsL'),
-                              style: TextStyle(
-                                color: pal.sec,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        if (c.isBasic) ...<Widget>[
-          const SizedBox(height: 14),
-          const LatestGlucoseCard(variant: LatestVariant.readings),
-          const SizedBox(height: 14),
-          RestrictedCard(onPrivacy: () => pushScreen(context, const PrivacyScreen())),
-        ] else
-          const _ExtendedReadings(),
-      ],
-    );
-  }
-}
-
-class _ExtendedReadings extends StatelessWidget {
-  const _ExtendedReadings();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.cg;
-    final pal = context.pal;
-    final s = c.strings;
     final bool ar = c.arabic;
+    final TextTheme t = Theme.of(context).textTheme;
 
     final ChartSeries? series = c.repository.chart(c.level, c.range);
     final RangeStats? stats = c.repository.rangeStats(c.level, c.range);
@@ -119,23 +49,26 @@ class _ExtendedReadings extends StatelessWidget {
         (c.sourceFilter == 'all' || c.sourceFilter == hba.source.name) &&
         c.range != ChartRange.day;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final List<Widget> rows = <Widget>[
+      if (showHba && hba != null) _HbaRow(record: hba),
+      for (final GlucoseReading r in records) _ReadingRow(reading: r),
+    ];
+
+    return PageFrame(
+      padding: const EdgeInsets.fromLTRB(CgGap.page, CgGap.md, CgGap.page, CgGap.xl),
       children: <Widget>[
-        const SizedBox(height: 14),
-        SegmentedBar<ChartRange>(
+        PageHeader(s.t('tRead'), subtitle: c.repository.patient.name.of(ar)),
+        PillTabs(
           semanticLabel: s.t('rangeLbl'),
-          options: <SegmentOption<ChartRange>>[
-            SegmentOption<ChartRange>(ChartRange.day, s.t('rDay')),
-            SegmentOption<ChartRange>(ChartRange.week, s.t('rWeek')),
-            SegmentOption<ChartRange>(ChartRange.month, s.t('rMonth')),
-          ],
-          selected: c.range,
-          onChanged: c.setRange,
+          labels: <String>[s.t('rDay'), s.t('rWeek'), s.t('rMonth')],
+          index: ChartRange.values.indexOf(c.range),
+          onChanged: (int i) => c.setRange(ChartRange.values[i]),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: CgGap.lg),
         if (series != null && stats != null)
           AppCard(
+            margin: const EdgeInsets.only(bottom: CgGap.lg),
+            padding: const EdgeInsets.all(CgGap.xl),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
@@ -146,26 +79,22 @@ class _ExtendedReadings extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(s.t('avg'), style: context.subStyle()),
+                        Text(s.t('avg'), style: t.labelSmall),
                         Text.rich(
                           TextSpan(
                             children: <InlineSpan>[
-                              TextSpan(text: '${stats.average} '),
-                              TextSpan(
-                                text: s.t('unit'),
-                                style: context.subStyle(11, FontWeight.w500),
-                              ),
+                              TextSpan(text: '${stats.average} ', style: t.titleMedium),
+                              TextSpan(text: s.t('unit'), style: t.labelSmall),
                             ],
                           ),
-                          style: context.hStyle(18),
                         ),
                       ],
                     ),
-                    LabeledValue(label: s.t('tir'), value: '${stats.inRangePercent}%', valueSize: 18),
-                    LabeledValue(label: s.t('readingsN'), value: '${stats.count}', valueSize: 18),
+                    LabeledValue(label: s.t('tir'), value: '${stats.inRangePercent}%', valueSize: 17),
+                    LabeledValue(label: s.t('readingsN'), value: '${stats.count}', valueSize: 17),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: CgGap.md),
                 GlucoseChart(
                   values: series.values,
                   height: 150,
@@ -179,17 +108,16 @@ class _ExtendedReadings extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      Expanded(child: Text(s.t('target'), style: context.subStyle())),
-                      const SizedBox(width: 8),
-                      Flexible(child: AppChip(stats.trend.of(ar), fg: pal.sec, bg: pal.soft)),
+                      Expanded(child: Text(s.t('target'), style: t.labelSmall)),
+                      const SizedBox(width: CgGap.sm),
+                      Flexible(child: AppChip(stats.trend.of(ar), fg: pal.pri, bg: pal.soft)),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-        const SizedBox(height: 16),
-        Text(s.t('fType'), style: context.subStyle(12.5, FontWeight.w600)),
+        Text(s.t('fType'), style: t.labelMedium!.copyWith(color: pal.sub)),
         const SizedBox(height: 6),
         ChoicePills<String>(
           options: <SegmentOption<String>>[
@@ -202,8 +130,8 @@ class _ExtendedReadings extends StatelessWidget {
           selected: c.typeFilter,
           onChanged: c.setTypeFilter,
         ),
-        const SizedBox(height: 12),
-        Text(s.t('fSource'), style: context.subStyle(12.5, FontWeight.w600)),
+        const SizedBox(height: CgGap.md),
+        Text(s.t('fSource'), style: t.labelMedium!.copyWith(color: pal.sub)),
         const SizedBox(height: 6),
         ChoicePills<String>(
           options: <SegmentOption<String>>[
@@ -215,92 +143,121 @@ class _ExtendedReadings extends StatelessWidget {
           selected: c.sourceFilter,
           onChanged: c.setSourceFilter,
         ),
-        if (showHba && hba != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: AppCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: <Widget>[
-                  IconBox(icon: AppIcons.drop, fg: pal.sec, bg: pal.soft),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(s.t('hba1c'), style: context.hStyle(14)),
-                        Text(
-                          '${s.t(hba.source.key)} · ${whenLabel(hba.time, s)}',
-                          style: context.subStyle(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(text: hba.percent.toStringAsFixed(1)),
-                        TextSpan(text: ' %', style: context.subStyle(14, FontWeight.w400)),
-                      ],
-                    ),
-                    style: context.hStyle(24, FontWeight.w800),
-                  ),
+        const SizedBox(height: CgGap.lg),
+        if (rows.isNotEmpty)
+          AppCard(
+            margin: const EdgeInsets.only(bottom: CgGap.lg),
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: <Widget>[
+                for (int i = 0; i < rows.length; i++) ...<Widget>[
+                  if (i > 0) Divider(height: 1, thickness: 1, color: pal.line),
+                  rows[i],
                 ],
-              ),
+              ],
             ),
+          )
+        else
+          EmptyState(
+            icon: AppIcons.chart,
+            title: s.t('noMatch'),
+            message: s.t('readOnly'),
           ),
-        for (final GlucoseReading r in records)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: AppCard(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: <Widget>[
-                  SizedBox(
-                    width: 62,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          '${r.value}',
-                          style: context.hStyle(22, FontWeight.w800).copyWith(height: 1.1),
-                        ),
-                        Text(s.t('unit'), style: context.subStyle(11)),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(s.t(r.type.key), style: context.hStyle(13.5)),
-                        Text(
-                          '${s.t(r.source.key)} · ${whenLabel(r.time, s)}',
-                          style: context.subStyle(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ToneChip(classLabel(r.cls, s), r.cls.tone),
-                ],
-              ),
-            ),
-          ),
-        if (records.isEmpty && !showHba)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: AppCard(
-              child: Text(
-                s.t('noMatch'),
-                textAlign: TextAlign.center,
-                style: context.subStyle(13),
-              ),
-            ),
-          ),
-        const SizedBox(height: 14),
-        LockNote(s.t('readOnly'), center: true),
+        if (rows.isNotEmpty) LockNote(s.t('readOnly'), center: true),
       ],
+    );
+  }
+}
+
+class _ReadingRow extends StatelessWidget {
+  const _ReadingRow({required this.reading});
+
+  final GlucoseReading reading;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final s = context.s;
+    final TextTheme t = Theme.of(context).textTheme;
+    final GlucoseReading r = reading;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: CgGap.lg, vertical: CgGap.md),
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            width: 64,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('${r.value}', style: t.titleLarge),
+                Text(s.t('unit'), style: t.labelSmall),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(s.t(r.type.key), style: context.hStyle(14)),
+                Text(
+                  '${s.t(r.source.key)} · ${whenLabel(r.time, s)}',
+                  style: t.labelSmall,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: CgGap.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 132),
+            child: StatusPill(
+              s.t(r.cls.key),
+              glucoseColor(pal, r.cls),
+              icon: glucoseIcon(r.cls),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HbaRow extends StatelessWidget {
+  const _HbaRow({required this.record});
+
+  final HbA1cRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    final TextTheme t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: CgGap.lg, vertical: CgGap.md),
+      child: Row(
+        children: <Widget>[
+          const IconCircle(AppIcons.drop, size: 40),
+          const SizedBox(width: CgGap.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(s.t('hba1c'), style: context.hStyle(14)),
+                Text(
+                  '${s.t(record.source.key)} · ${whenLabel(record.time, s)}',
+                  style: t.labelSmall,
+                ),
+              ],
+            ),
+          ),
+          Text.rich(
+            TextSpan(
+              children: <InlineSpan>[
+                TextSpan(text: record.percent.toStringAsFixed(1), style: t.titleLarge),
+                TextSpan(text: ' %', style: t.labelSmall),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

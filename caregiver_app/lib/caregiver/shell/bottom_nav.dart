@@ -1,10 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../state/caregiver_scope.dart';
 import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/patient_style.dart';
 
 class _NavSpec {
   const _NavSpec(this.icon, this.labelKey);
@@ -20,8 +20,10 @@ const List<_NavSpec> _tabs = <_NavSpec>[
   _NavSpec(AppIcons.user, 'tProfile'),
 ];
 
-/// Bottom navigation: Home / Readings / Alerts / Profile. The Alerts tab shows
-/// the number of unread alerts.
+/// Bottom navigation: Home / Readings / Alerts / Profile.
+///
+/// Same floating rounded bar as the Patient app. The Alerts tab shows the
+/// number of unread alerts.
 class CaregiverBottomNav extends StatelessWidget {
   const CaregiverBottomNav({super.key});
 
@@ -30,35 +32,41 @@ class CaregiverBottomNav extends StatelessWidget {
     final c = context.cg;
     final pal = context.pal;
     final s = c.strings;
-    final double bottom = math.max(14.0, MediaQuery.of(context).padding.bottom);
 
     return Semantics(
       container: true,
       label: s.t('nav'),
       child: Material(
-        color: pal.card,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(height: 1, color: pal.line),
-            Padding(
-              padding: EdgeInsets.fromLTRB(8, 8, 8, bottom),
-              child: Row(
-                children: <Widget>[
-                  for (int i = 0; i < _tabs.length; i++)
-                    Expanded(
-                      child: _NavItem(
-                        spec: _tabs[i],
-                        label: s.t(_tabs[i].labelKey),
-                        selected: c.tabIndex == i,
-                        badge: i == 2 ? c.unreadCount : 0,
-                        onTap: () => c.selectTab(i),
-                      ),
-                    ),
-                ],
-              ),
+        color: pal.bg,
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: CgGap.sm),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(CgGap.md, CgGap.xs, CgGap.md, CgGap.xs),
+            padding: const EdgeInsets.symmetric(horizontal: CgGap.xs, vertical: CgGap.xs + 2),
+            decoration: BoxDecoration(
+              color: pal.card,
+              borderRadius: BorderRadius.circular(AppRadii.xl),
+              border: Border.all(color: pal.line),
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: pal.shadow, blurRadius: 24, offset: const Offset(0, 8)),
+              ],
             ),
-          ],
+            child: Row(
+              children: <Widget>[
+                for (int i = 0; i < _tabs.length; i++)
+                  Expanded(
+                    child: _NavItem(
+                      spec: _tabs[i],
+                      label: s.t(_tabs[i].labelKey),
+                      selected: c.tabIndex == i,
+                      badge: i == 2 ? c.unreadCount : 0,
+                      onTap: () => c.selectTab(i),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -93,29 +101,30 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: CgGap.xs),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Stack(
                 clipBehavior: Clip.none,
                 children: <Widget>[
-                  Container(
-                    width: 54,
-                    height: 30,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    width: 52,
+                    height: 32,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: selected ? pal.soft : Colors.transparent,
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(AppRadii.md),
                     ),
-                    child: AppIcon(spec.icon, color: color),
+                    child: AppIcon(spec.icon, size: 24, color: color),
                   ),
                   if (badge > 0)
                     PositionedDirectional(
                       top: -3,
-                      end: 2,
+                      end: 0,
                       child: Container(
                         constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                         padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -137,7 +146,7 @@ class _NavItem extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: CgGap.xs),
               Text(
                 label,
                 maxLines: 1,

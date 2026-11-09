@@ -30,6 +30,9 @@ class MockCaregiverRepository implements CaregiverRepository {
     phone: '+970 59 765 4321',
   );
 
+  @override
+  final String invitedEmail = 'nour.haddad@example.com';
+
   static final List<GlucoseReading> _readings = <GlucoseReading>[
     GlucoseReading(id: 'r1', value: 168, type: ReadingType.ppbs, source: ReadingSource.sensor, time: DateTime(2026, 10, 30, 8, 12), cls: GlucoseClass.high),
     GlucoseReading(id: 'r2', value: 104, type: ReadingType.fbs, source: ReadingSource.manual, time: DateTime(2026, 10, 30, 7, 5), cls: GlucoseClass.ok),
@@ -87,18 +90,30 @@ class MockCaregiverRepository implements CaregiverRepository {
     ChartRange.day: RangeStats(
       average: 120,
       inRangePercent: 80,
+      lowPercent: 0,
+      highPercent: 20,
+      lowest: 98,
+      highest: 168,
       count: 5,
       trend: LocalizedText('+64 mg/dL since 07:05', '+64 mg/dL منذ 07:05'),
     ),
     ChartRange.week: RangeStats(
       average: 156,
       inRangePercent: 59,
+      lowPercent: 8,
+      highPercent: 33,
+      lowest: 48,
+      highest: 342,
       count: 34,
       trend: LocalizedText('+4% vs previous week', '+4% عن الأسبوع السابق'),
     ),
     ChartRange.month: RangeStats(
       average: 149,
       inRangePercent: 60,
+      lowPercent: 9,
+      highPercent: 31,
+      lowest: 48,
+      highest: 342,
       count: 138,
       trend: LocalizedText('+2% vs September', '+2% عن سبتمبر'),
     ),

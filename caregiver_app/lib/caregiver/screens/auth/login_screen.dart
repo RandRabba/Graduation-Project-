@@ -10,11 +10,12 @@ import '../../widgets/app_text_field.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/toast.dart';
 import 'auth_frame.dart';
-import 'invitation_screen.dart';
 import 'register_screen.dart';
+import 'session_routes.dart';
 
 /// One shared login. The backend decides the role after sign in, so nobody
-/// picks a role on this screen.
+/// picks a role on this screen. A caregiver signs in here after registering
+/// with the email the patient added.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -50,13 +51,15 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     setState(() => _error = false);
-    final bool isPatient = context.cgRead.roleIsPatient;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext _) =>
-            isPatient ? const PatientStubScreen() : const InvitationScreen(),
-      ),
-    );
+    // The backend decides the role after sign in. A caregiver goes straight
+    // to the dashboard: there is no verification or invitation step.
+    if (context.cgRead.roleIsPatient) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (BuildContext _) => const PatientStubScreen()),
+      );
+    } else {
+      openDashboard(context);
+    }
   }
 
   @override

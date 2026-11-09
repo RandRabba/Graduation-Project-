@@ -10,9 +10,9 @@ import '../../widgets/buttons.dart';
 import '../../widgets/glucose_chart.dart';
 import '../../widgets/lock_note.dart';
 import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/state_view.dart';
 import '../../widgets/toast.dart';
-import '../patient/restricted_screen.dart';
 
 /// One health report: statistics, chart, reading summary and alert summary.
 class ReportDetailScreen extends StatelessWidget {
@@ -24,7 +24,6 @@ class ReportDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.cg;
     if (c.isBlocking) return const BlockedPage();
-    if (c.isBasic) return const RestrictedScreen();
 
     final pal = context.pal;
     final s = c.strings;
@@ -39,11 +38,9 @@ class ReportDetailScreen extends StatelessWidget {
       _Segment('! ${s.t('sevCrit')}', report.critical, pal.crit),
     ];
 
-    return PageFrame(
+    return SubPage(
+      title: s.t('rp_${report.period.name}'),
       children: <Widget>[
-        const BackRow(),
-        ScreenTitle(s.t('rp_${report.period.name}')),
-        const SizedBox(height: 12),
         AppCard(
           child: ColumnGrid(
             children: <Widget>[

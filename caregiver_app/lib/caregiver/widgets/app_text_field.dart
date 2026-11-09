@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_palette.dart';
+import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
 /// Labelled text field. [compact] is the 46px profile-form variant; the
@@ -44,13 +45,10 @@ class AppTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pal = context.pal;
-    final double radius = compact ? 12 : 14;
-    final double borderWidth = compact ? 1 : 1.5;
-    final Color idle = compact ? pal.line : pal.inputBorder;
-
-    OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radius),
-          borderSide: BorderSide(color: c, width: w),
+    // Same field style as the Patient app: filled, no idle outline, primary focus ring.
+    OutlineInputBorder border(BorderSide side) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderSide: side,
         );
 
     return Padding(
@@ -102,10 +100,11 @@ class AppTextField extends StatelessWidget {
                   horizontal: compact ? 12 : 14,
                   vertical: compact ? 14 : 17,
                 ),
-                border: border(idle, borderWidth),
-                enabledBorder: border(idle, borderWidth),
-                disabledBorder: border(pal.line, borderWidth),
-                focusedBorder: border(pal.acc, 2),
+                hintStyle: TextStyle(color: pal.hint),
+                border: border(BorderSide.none),
+                enabledBorder: border(BorderSide.none),
+                disabledBorder: border(BorderSide.none),
+                focusedBorder: border(BorderSide(color: pal.pri, width: 1.5)),
               ),
             ),
           ),

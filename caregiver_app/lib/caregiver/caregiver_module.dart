@@ -44,7 +44,7 @@ class CaregiverModule extends StatefulWidget {
   /// [controller] is supplied (the controller already holds its repository).
   final CaregiverRepository? repository;
 
-  /// Skip login, registration and the invitation and open the dashboard.
+  /// Skip login and registration and open the dashboard.
   /// Use this when the host app already signed the caregiver in.
   final bool startAtDashboard;
 
@@ -149,10 +149,13 @@ class _CaregiverModuleState extends State<CaregiverModule> {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
-              theme: AppTheme.build(dark: c.dark, arabic: arabic),
+              theme: AppTheme.light,
+              darkTheme: AppTheme.dark,
+              themeMode: c.themeMode,
               builder: (BuildContext context, Widget? child) {
+                final bool dark = Theme.of(context).brightness == Brightness.dark;
                 return AnnotatedRegion<SystemUiOverlayStyle>(
-                  value: c.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+                  value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
                   child: child ?? const SizedBox.shrink(),
                 );
               },

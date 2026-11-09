@@ -6,7 +6,7 @@ import '../../theme/app_palette.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/buttons.dart';
-import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/toast.dart';
 
 /// Change password form. Mock: it validates locally and shows a message.
@@ -48,11 +48,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final pal = context.pal;
     final s = context.s;
 
-    return PageFrame(
+    return SubPage(
+      title: s.t('chPwd'),
       children: <Widget>[
-        const BackRow(),
-        ScreenTitle(s.t('chPwd')),
-        const SizedBox(height: 14),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

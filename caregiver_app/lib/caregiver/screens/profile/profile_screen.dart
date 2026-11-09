@@ -6,20 +6,19 @@ import '../../theme/app_palette.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_icon.dart';
-import '../../widgets/app_switch.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/page_frame.dart';
+import '../../widgets/patient_style.dart';
 import '../../widgets/segmented.dart';
 import '../../widgets/sheets.dart';
 import '../../widgets/toast.dart';
-import '../auth/invitation_screen.dart';
+import '../auth/session_routes.dart';
 import '../routes.dart';
 import 'change_password_screen.dart';
 import 'help_screen.dart';
 import 'notification_prefs_screen.dart';
 import 'privacy_screen.dart';
-import 'settings_row.dart';
 
 /// Profile tab: personal information (editable), the connection to the
 /// patient, and settings. Always available, also in loading, error, revoked
@@ -33,17 +32,11 @@ class ProfileScreen extends StatelessWidget {
     final s = c.strings;
 
     return PageFrame(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+      padding: const EdgeInsets.fromLTRB(CgGap.page, CgGap.md, CgGap.page, CgGap.xl),
       children: <Widget>[
-        ScreenTitle(s.t('profT')),
-        const SizedBox(height: 14),
+        PageHeader(s.t('profT')),
         const _PersonalCard(),
-        const SizedBox(height: 14),
         const _ConnectionCard(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
-          child: Text(s.t('settings'), style: context.subStyle(12.5, FontWeight.w700)),
-        ),
         const _SettingsCard(),
       ],
     );
@@ -96,6 +89,7 @@ class _PersonalCardState extends State<_PersonalCard> {
     final CaregiverProfile profile = c.repository.caregiver;
 
     return AppCard(
+      margin: const EdgeInsets.only(bottom: CgGap.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -146,7 +140,6 @@ class _PersonalCardState extends State<_PersonalCard> {
                     enabled: false,
                     ltr: true,
                     topSpacing: 10,
-                    badge: AppChip(s.t('verified'), fg: pal.ok, bg: pal.okBg),
                   ),
                   AppTextField(
                     label: s.t('pfPhone'),
@@ -199,6 +192,7 @@ class _ConnectionCard extends StatelessWidget {
 
     if (c.dataState == DataState.noPatient) {
       return AppCard(
+        margin: const EdgeInsets.only(bottom: CgGap.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -213,6 +207,7 @@ class _ConnectionCard extends StatelessWidget {
     }
 
     return AppCard(
+      margin: const EdgeInsets.only(bottom: CgGap.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -237,24 +232,10 @@ class _ConnectionCard extends StatelessWidget {
             margin: const EdgeInsets.only(top: 12),
             padding: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(border: Border(top: BorderSide(color: pal.line))),
-            child: ColumnGrid(
+            child: Row(
               children: <Widget>[
-                LabeledValue(
-                  label: s.t('accessL'),
-                  value: c.isExtended ? s.t('lvExt') : s.t('lvBasic'),
-                  valueSize: 13.5,
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(s.t('connStatus'), style: context.subStyle()),
-                    const SizedBox(height: 2),
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: AppChip('✓ ${s.t('active')}', fg: pal.ok, bg: pal.okBg),
-                    ),
-                  ],
-                ),
+                Expanded(child: Text(s.t('connStatus'), style: context.subStyle())),
+                StatusPill(s.t('active'), pal.ok, icon: AppIcons.check),
               ],
             ),
           ),
@@ -281,59 +262,57 @@ class _SettingsCard extends StatelessWidget {
     final pal = context.pal;
     final s = c.strings;
 
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          SettingsRow(
-            icon: AppIcons.lock,
-            label: s.t('chPwd'),
-            onTap: () => pushScreen(context, const ChangePasswordScreen()),
-          ),
-          SettingsRow(
-            icon: AppIcons.bell,
-            label: s.t('notifPref'),
-            onTap: () => pushScreen(context, const NotificationPrefsScreen()),
-          ),
-          SettingsRow(
-            icon: AppIcons.globe,
-            label: s.t('lang'),
-            trailing: SegmentedBar<bool>(
-              compact: true,
-              semanticLabel: s.t('lang'),
-              options: const <SegmentOption<bool>>[
-                SegmentOption<bool>(false, 'English'),
-                SegmentOption<bool>(true, 'العربية'),
-              ],
-              selected: c.arabic,
-              onChanged: c.setArabic,
-            ),
-          ),
-          SettingsRow(
-            icon: AppIcons.moon,
-            label: s.t('dark'),
-            trailing: AppSwitch(value: c.dark, onChanged: c.setDark, label: s.t('dark')),
-          ),
-          SettingsRow(
-            icon: AppIcons.shield,
-            label: s.t('privTitle'),
-            onTap: () => pushScreen(context, const PrivacyScreen()),
-          ),
-          SettingsRow(
-            icon: AppIcons.help,
-            label: s.t('help'),
-            onTap: () => pushScreen(context, const HelpScreen()),
-          ),
-          SettingsRow(
-            icon: AppIcons.logout,
-            label: s.t('logout'),
-            color: pal.crit,
-            isLast: true,
-            onTap: () => goToLogin(context),
-          ),
-        ],
+    return SettingsGroup(s.t('settings'), <Widget>[
+      SettingsTile(
+        AppIcons.lock,
+        s.t('chPwd'),
+        onTap: () => pushScreen(context, const ChangePasswordScreen()),
       ),
-    );
+      SettingsTile(
+        AppIcons.bell,
+        s.t('notifPref'),
+        onTap: () => pushScreen(context, const NotificationPrefsScreen()),
+      ),
+      SettingsTile(
+        AppIcons.globe,
+        s.t('lang'),
+        trailing: SegmentedBar<bool>(
+          compact: true,
+          semanticLabel: s.t('lang'),
+          options: const <SegmentOption<bool>>[
+            SegmentOption<bool>(false, 'English'),
+            SegmentOption<bool>(true, 'العربية'),
+          ],
+          selected: c.arabic,
+          onChanged: c.setArabic,
+        ),
+      ),
+      SettingsTile(
+        AppIcons.moon,
+        s.t('appearance'),
+        value: s.t(switch (c.themeMode) {
+          ThemeMode.system => 'themeSys',
+          ThemeMode.light => 'themeLight',
+          ThemeMode.dark => 'themeDark',
+        }),
+        onTap: () => showThemeSheet(context),
+      ),
+      SettingsTile(
+        AppIcons.shield,
+        s.t('privTitle'),
+        onTap: () => pushScreen(context, const PrivacyScreen()),
+      ),
+      SettingsTile(
+        AppIcons.help,
+        s.t('help'),
+        onTap: () => pushScreen(context, const HelpScreen()),
+      ),
+      SettingsTile(
+        AppIcons.logout,
+        s.t('logout'),
+        iconColor: pal.crit,
+        onTap: () => goToLogin(context),
+      ),
+    ]);
   }
 }
