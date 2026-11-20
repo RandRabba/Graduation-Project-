@@ -59,18 +59,41 @@ export const tt = (k, a = {}) => h(t(k, a));
 export const tv = (prefix, v) => (v != null && DICT[prefix + v] !== undefined ? DICT[prefix + v] : (v ?? ''));
 export const has = k => DICT[k] !== undefined;
 
+// Named date / time formats: the ONLY formats used for display (pass them to ldate). Examples for Sat 21 Nov 2026 9:05:
+//   DATE        Nov 21, 2026                   any date in lists, tables, cards, reports, notifications (always the year)
+//   DATE_TIME   Nov 21, 2026 · 9:05 AM         readings, reviews, messages, meals, notifications in lists
+//   FOLLOW_UP   Sat, Nov 21, 2026 · 9:05 AM    appointments and follow-ups (future dates: the weekday helps)
+//   TIME        9:05 AM                        only where the date is already shown next to it
+//   SHORT       Nov 21                         chart axes and tooltips, day selector chips (may stay short)
+//   SHORT_TIME  Nov 21 · 9:05 AM               chart tooltips
+//   SHORT_DAY   Sat, Nov 21                    chart day tooltips
+//   HOUR        9 AM                           hour axis
+//   MONTH       Nov 2026                       month only (Profile "Joined")
+//   DAY_NUM / WEEKDAY   21 / Sat               small chart axis labels
+// Date and time are always separated by " · "; no leading zeros. Arabic: day before month, Arabic names (ldate).
+export const DF = {
+  DATE: 'M j, Y', DATE_TIME: 'M j, Y · g:i A', FOLLOW_UP: 'D, M j, Y · g:i A', TIME: 'g:i A',
+  SHORT: 'M j', SHORT_TIME: 'M j · g:i A', SHORT_DAY: 'D, M j', HOUR: 'g A', MONTH: 'M Y', DAY_NUM: 'j', WEEKDAY: 'D',
+};
+
 // Dates with month/day names and AM/PM in the current language (PHP ldate)
 let calMap = null;
 export function ldate(fmt, ts) {
   if (!Number.isFinite(ts)) return String(ts ?? '');
   if (LANG === 'en') return phpDate(fmt, ts);
-  // Arabic order: day before month ("7 نوفمبر 2026"), Arabic comma, then names in Arabic
-  const f = fmt.replace(/M d, Y/, 'j M Y').replace(/M d/, 'j M').replace('D, ', 'D، ').replace(', h', ' · h');
+  // Arabic order: day before month ("7 نوفمبر 2026"), Arabic comma, then names in Arabic (d or j, h or g)
+  const f = fmt.replace(/M [dj], Y/, 'j M Y').replace(/M [dj]/, 'j M').replace('D, ', 'D، ').replace(/, ([hg])/, ' · $1');
   if (!calMap) {
     calMap = { AM: DICT['time.am'], PM: DICT['time.pm'] };
     for (const x of ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) calMap[x] = DICT['cal.' + x];
   }
   return bidi(phpDate(f, ts).replace(/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Mon|Tue|Wed|Thu|Fri|Sat|Sun|AM|PM/g, m => calMap[m]));
+}
+// A date range, both ends inclusive: "Nov 8 – Nov 20, 2026"; with the year on both ends when it crosses a year
+// ("Dec 28, 2026 – Jan 3, 2027")
+export function dateRange(a, b) {
+  const sameYear = new Date(a * 1000).getFullYear() === new Date(b * 1000).getFullYear();
+  return ldate(sameYear ? DF.SHORT : DF.DATE, a) + ' – ' + ldate(DF.DATE, b);
 }
 // A signed number (+23) or range (70 – 180) that keeps its order inside Arabic text
 export const ltr = v => `<bdi dir="ltr">${h(v)}</bdi>`;

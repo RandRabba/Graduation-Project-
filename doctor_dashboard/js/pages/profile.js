@@ -1,7 +1,7 @@
 // Doctor profile: photo, information, security, notifications and preferences (language, appearance, glucose unit).
 // Saved in this browser until the backend stores them (getDoctor / saveDoctor in data/api.js).
 import { mount } from '../ui/layout.js';
-import { t, tt, tv, ldate, LANG, setLang } from '../core/i18n.js';
+import { t, tt, tv, ldate, DF, LANG, setLang } from '../core/i18n.js';
 import { $, $$, h, ic } from '../core/dom.js';
 import { setFlash, takeFlash } from '../core/storage.js';
 import { setTheme } from '../core/theme.js';
@@ -35,7 +35,7 @@ await mount({ page: 'profile', title: t('nav.profile'), heading: t('nav.profile'
   <section class="stats">
     <div class="card c-avg"><div class="ico">${ic('steth')}</div><div><small>${tt('prof.card.spec')}</small><strong dir="auto">${d.spec !== '' ? h(d.spec) : '—'}</strong></div></div>
     <div class="card c-ok"><div class="ico">${ic('users')}</div><div><small>${tt('prof.card.pats')}</small><b>${nPatients}</b></div></div>
-    <div class="card c-high"><div class="ico">${ic('calendar')}</div><div><small>${tt('prof.card.joined')}</small><b>${d.joined ? h(ldate('M Y', d.joined)) : '—'}</b></div></div>
+    <div class="card c-high"><div class="ico">${ic('calendar')}</div><div><small>${tt('prof.card.joined')}</small><b>${d.joined ? h(ldate(DF.MONTH, d.joined)) : '—'}</b></div></div>
     <div class="card c-ok"><div class="ico">${ic('shield')}</div><div><small>${tt('prof.card.status')}</small>${d.status ? `<span class="pill on">${h(tv('acct.', d.status))}</span>` : '<b>—</b>'}</div></div>
   </section>
 

@@ -5,7 +5,7 @@
 //    trend (events on demand), meals and glucose change, medication adherence, and glucose around consultations.
 // All values are calculated from the recorded data (core/analytics.js); nothing is filled in or invented.
 import { mount } from '../ui/layout.js';
-import { t, tt, ldate, ltr, iso } from '../core/i18n.js';
+import { t, tt, ldate, DF, ltr, iso } from '../core/i18n.js';
 import { $, $$, h, ic, params, qint, url } from '../core/dom.js';
 import { DAY, now, ymd } from '../core/time.js';
 import { targets } from '../core/clinical.js';
@@ -44,7 +44,7 @@ const rangeBar = `<div class="filters strange">
       <label><span>${tt('range.from')}</span><input type="date" name="from" value="${h(rg.fromS)}" max="${ymd(now())}" required></label>
       <label><span>${tt('range.to')}</span><input type="date" name="to" value="${h(rg.toS)}" max="${ymd(now())}" required></label>
       <button class="btn sm" type="submit">${tt('range.apply')}</button></form></div></div>
-  <p class="speriod">${ic('calendar')} ${tt('st2.period', { a: ldate('M d, Y', from), b: ldate('M d, Y', to - 1), n: nd })}</p></div>`;
+  <p class="speriod">${ic('calendar')} ${tt('st2.period', { a: ldate(DF.DATE, from), b: ldate(DF.DATE, to - 1), n: nd })}</p></div>`;
 
 // A key measure with its change against the previous period of the same length (better / worse in words)
 const tile = (label, v, pv, unit, better, { digits = 0, note = '', na = '' } = {}) => {
@@ -83,7 +83,7 @@ function allPatients() {
 const labTable = p => {
   if (!p.labs.length) return `<p class="txt">${tt('stats.no_labs')}</p>`;
   const dates = [...new Set(p.labs.map(l => l.at))].sort((a, b) => a - b), tests = [...new Set(p.labs.map(l => l.test))];
-  return `<div class="tscroll"><table class="tbl"><thead><tr><th>${tt('cf.lab_test')}</th>${dates.map(a => `<th>${h(ldate('M d, Y', a))}</th>`).join('')}</tr></thead><tbody>
+  return `<div class="tscroll"><table class="tbl"><thead><tr><th>${tt('cf.lab_test')}</th>${dates.map(a => `<th>${h(ldate(DF.DATE, a))}</th>`).join('')}</tr></thead><tbody>
     ${tests.map(k => `<tr><td>${tt('lab.' + k)} <small>${ltr(LABS[k] ?? '')}</small></td>${dates.map(a => { const l = p.labs.find(x => x.test === k && x.at === a); return `<td>${l ? ltr(String(l.v)) : '—'}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
 };
 
@@ -98,7 +98,7 @@ function onePatient(p) {
   const fnd = findings(p, from, to).filter(f => ['f.night_lows', 'f.fasting_high'].includes(f.k));
   const verOf = d => p.regimen.versions.find(x => x.id === d.ver) ?? p.regimen.versions.filter(x => x.rx === d.rx).at(-1);
   const doseLabel = d => { const v = verOf(d); return v ? `${iso(v.drug)} ${medDose(v)}` : d.rx; };
-  const marks = p.consultations.map(c => ({ at: c.at, short: t(c.kind === 'initial' ? 'chart.mark_c1' : 'chart.mark_c'), label: `${consKind(c.kind)} · ${ldate('M d, Y', c.at)}` }));
+  const marks = p.consultations.map(c => ({ at: c.at, short: t(c.kind === 'initial' ? 'chart.mark_c1' : 'chart.mark_c'), label: `${consKind(c.kind)} · ${ldate(DF.DATE, c.at)}` }));
   const meals = p.meals.filter(inP), mi = mealImpact(meals), doses = p.doses.filter(inP);
   // Adherence per medication from the dose log (taken = confirmed by the patient)
   const byRx = [...new Set(doses.map(d => d.rx))].map(rx => { const a = adherence(p.doses, from, to, rx), v = p.regimen.versions.filter(x => x.rx === rx).at(-1);

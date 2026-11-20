@@ -1,5 +1,5 @@
 // Shared HTML pieces. Each returns an HTML string.
-import { t, tt, tv, ldate, ltr, iso } from '../core/i18n.js';
+import { t, tt, tv, ldate, DF, dateRange, ltr, iso } from '../core/i18n.js';
 import { h, ic, initials, dash } from '../core/dom.js';
 import { DAY, now, today, addDays, addHours, ymd, parseYmd, startOfDay } from '../core/time.js';
 import { targets, stRange, statusHistory, dailyAverages } from '../core/clinical.js';
@@ -39,7 +39,7 @@ export const statusSource = p => (p.statusSrc === 'backend' ? tt('status.src.bac
 export function statusBlock(p) {
   return `<span class="stblock">${statusPill(p.status)}${p.awaiting ? awaitingPill() : ''}<small>${statusSource(p)}</small></span>`;
 }
-export const flagText = f => t('flag.' + f.k, { ...(f.a ?? {}), at: f.a?.at ? ldate('M d', f.a.at) : '' });
+export const flagText = f => t('flag.' + f.k, { ...(f.a ?? {}), at: f.a?.at ? ldate(DF.DATE, f.a.at) : '' });
 export const flagChips = (flags, max = 4) => (flags.length ? `<span class="flags">${flags.slice(0, max).map(f => `<span class="flag f-${f.sev}">${h(flagText(f))}</span>`).join('')}${flags.length > max ? `<span class="flag f-info">+${flags.length - max}</span>` : ''}</span>` : '');
 
 // Medication helpers
@@ -66,7 +66,7 @@ export function notifText(n) {
     case 'request': return { title: t('n.request.' + a.kind), sub: a.note };
     case 'message': return { title: t('n.message'), sub: a.text };
     case 'treatment': return { title: t('n.treatment'), sub: a.ch.map(c => c.act === 'change' && c.prev ? `${iso(c.drug)} ${medDose(c.prev)} → ${medDose(c)}` : `${t('medact.' + c.act)}: ${iso(c.drug)} ${medDose(c)}`).join(' · ') + ' · ' + t('sync.pending_short') };
-    case 'followup': return { title: t(a.over ? 'n.fu_over' : 'n.fu_due'), sub: ldate('D, M d · h:i A', a.at) };
+    case 'followup': return { title: t(a.over ? 'n.fu_over' : 'n.fu_due'), sub: ldate(DF.FOLLOW_UP, a.at) };
     case 'adherence': return { title: t('n.adherence', { n: a.n }), sub: '' };
     default: return { title: n.kind, sub: '' };
   }
@@ -97,11 +97,11 @@ export function avgChart(series, label) {
   let cur = [];
   series.forEach(([day, v], i) => {
     const x = Math.round((50 + i * step) * 10) / 10;
-    if (n <= 7 || i % 5 === 0) o += `<text x="${x}" y="195" text-anchor="middle" class="ax">${h(ldate(n > 7 ? 'M d' : 'D', day))}</text>`;
+    if (n <= 7 || i % 5 === 0) o += `<text x="${x}" y="195" text-anchor="middle" class="ax">${h(ldate(n > 7 ? DF.SHORT : DF.WEEKDAY, day))}</text>`;
     if (v === null) {
       if (cur.length) segs.push(cur); cur = [];
       const w = Math.max(8, step || 40);
-      o += `<rect x="${Math.round((x - w / 2) * 10) / 10}" y="30" width="${Math.round(w * 10) / 10}" height="140" class="nodata"><title>${h(ldate('M d', day) + ' · ' + t('chart.no_data_day'))}</title></rect>`;
+      o += `<rect x="${Math.round((x - w / 2) * 10) / 10}" y="30" width="${Math.round(w * 10) / 10}" height="140" class="nodata"><title>${h(ldate(DF.SHORT, day) + ' · ' + t('chart.no_data_day'))}</title></rect>`;
       return;
     }
     const q = [x, Math.round((170 - (Math.max(60, Math.min(260, v)) - 60) / 200 * 140) * 10) / 10, v, day];
@@ -112,14 +112,14 @@ export function avgChart(series, label) {
     o += segs.filter(sg => sg.length > 1).map(sg => `<polyline class="line" points="${sg.map(q => q[0] + ',' + q[1]).join(' ')}"/>`).join('');
     // Values on the first, last, highest and lowest points only; every point has a tooltip
     const lab = new Set([pts[0], pts.at(-1), pts.reduce((a, q) => (q[2] > a[2] ? q : a)), pts.reduce((a, q) => (q[2] < a[2] ? q : a))]);
-    for (const q of pts) o += `<circle cx="${q[0]}" cy="${q[1]}" r="5" class="dot"><title>${h(ldate('M d', q[3]) + ' · ' + q[2] + ' mg/dL')}</title></circle>${lab.has(q) || n <= 7 ? `<text x="${q[0]}" y="${q[1] - 12}" text-anchor="middle">${q[2]}</text>` : ''}`;
+    for (const q of pts) o += `<circle cx="${q[0]}" cy="${q[1]}" r="5" class="dot"><title>${h(ldate(DF.SHORT, q[3]) + ' · ' + q[2] + ' mg/dL')}</title></circle>${lab.has(q) || n <= 7 ? `<text x="${q[0]}" y="${q[1] - 12}" text-anchor="middle">${q[2]}</text>` : ''}`;
   } else o += `<text x="350" y="60" text-anchor="middle" class="ax">${tt('empty.readings')}</text>`;
   return o + '</svg>';
 }
 
 export function readingRow(r, tg) {
   const s = GSRC[r.src];
-  return `<div class="row ${r.st}" data-s="${h(lower(s[1] + ' ' + (r.type ?? '') + ' ' + r.v + ' ' + readingLabel(r.st)))}"><div class="who"><div class="ico">${s[0]}</div><div><b>${h(s[1])}</b><small>${h(r.type ?? '')}</small></div></div><div class="val"><bdi class="qty"><b>${h(r.v)}</b> <span>${tt('unit.mgdl')}</span></bdi><div class="when">${h(ldate('M d, Y · h:i A', r.at))}</div></div><div class="stat"><span class="pill">${h(readingLabel(r.st))}</span><span class="rng">(${ltr(stRange(r.st, tg, r.v))})</span></div><span></span></div>`;
+  return `<div class="row ${r.st}" data-s="${h(lower(s[1] + ' ' + (r.type ?? '') + ' ' + r.v + ' ' + readingLabel(r.st)))}"><div class="who"><div class="ico">${s[0]}</div><div><b>${h(s[1])}</b><small>${h(r.type ?? '')}</small></div></div><div class="val"><bdi class="qty"><b>${h(r.v)}</b> <span>${tt('unit.mgdl')}</span></bdi><div class="when">${h(ldate(DF.DATE_TIME, r.at))}</div></div><div class="stat"><span class="pill">${h(readingLabel(r.st))}</span><span class="rng">(${ltr(stRange(r.st, tg, r.v))})</span></div><span></span></div>`;
 }
 
 // ===== Glucose through one day =====
@@ -130,7 +130,7 @@ export function dayTimeline(p, url) {
   let o = `<div class="seg daysel" role="group" aria-label="${tt('tl.days')}">`;
   for (let i = 6; i >= 0; i--) {
     const d = addDays(today(), -i), on = d === day;
-    o += `<a href="${h(url(ymd(d)))}" class="${on ? 'on' : ''}"${on ? ' aria-current="true"' : ''}>${h({ 0: t('day.today'), 1: t('day.yesterday') }[i] ?? ldate('M d', d))}</a>`;
+    o += `<a href="${h(url(ymd(d)))}" class="${on ? 'on' : ''}"${on ? ' aria-current="true"' : ''}>${h({ 0: t('day.today'), 1: t('day.yesterday') }[i] ?? ldate(DF.SHORT, d))}</a>`;
   }
   o += '</div>';
   if (!rs.length) return o + `<p class="empty">${tt('tl.none')}</p>`;
@@ -142,10 +142,10 @@ export function dayTimeline(p, url) {
   o += `<svg class="chart gchart tl" viewBox="0 0 720 232" role="img" aria-label="${tt('tl.title')}"><rect x="${L}" y="${Y(tg.high)}" width="${R - L}" height="${Y(tg.low) - Y(tg.high)}" class="band"/>`;
   o += targetLines(tg, L, R, Y) + `<line x1="${L}" x2="${R}" y1="${B}" y2="${B}" class="grid"/>`;
   for (let hr = 0; hr < 24; hr += 3) { const ts = addHours(day, hr);
-    o += `<line x1="${X(ts)}" x2="${X(ts)}" y1="${B}" y2="${B + 4}" class="grid"/><text x="${X(ts)}" y="${B + 18}" text-anchor="middle" class="ax">${h(ldate('g A', ts))}</text>`; }
+    o += `<line x1="${X(ts)}" x2="${X(ts)}" y1="${B}" y2="${B + 4}" class="grid"/><text x="${X(ts)}" y="${B + 18}" text-anchor="middle" class="ax">${h(ldate(DF.HOUR, ts))}</text>`; }
   o += `<polyline class="tline" points="${rs.map(r => X(r.at) + ',' + Y(r.v)).join(' ')}"/>`;
   for (const r of rs) {
-    const x = X(r.at), y = Y(r.v), tip = `<title>${h(`${r.v} mg/dL · ${ldate('h:i A', r.at)} · ${GSRC[r.src][1]} · ${readingLabel(r.st)}`)}</title>`;
+    const x = X(r.at), y = Y(r.v), tip = `<title>${h(`${r.v} mg/dL · ${ldate(DF.TIME, r.at)} · ${GSRC[r.src][1]} · ${readingLabel(r.st)}`)}</title>`;
     o += r.src === 'cgm' ? `<circle cx="${x}" cy="${y}" r="5" class="p-${r.st}">${tip}</circle>` : `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" class="p-${r.st}">${tip}</rect>`;
     if (rs.length <= 16) o += `<text x="${x}" y="${y - 10}" text-anchor="middle" class="mm">${h(r.v)}</text>`;
   }
@@ -158,7 +158,7 @@ export { targetLines };
 // Each week is classified with the existing rule (core/clinical statusHistory: sensor data on at least 70% of its
 // days). A week WITH readings but too little sensor coverage says so; "No readings" only when there are none.
 // The detailed readings stay in Glucose Monitoring.
-export const weekLabel = w => ldate('M d', w.from) + ' – ' + ldate('M d', w.to - 1);
+export const weekLabel = w => dateRange(w.from, w.to - 1);
 export function statusHistoryHtml(p) {
   return `<ol class="shist2">${statusHistory(p).map(w => {
     const k = w.st ?? (w.n ? 'insuf' : 'none');
@@ -172,7 +172,7 @@ export function statusHistoryHtml(p) {
 export function remWhen(ts) {
   const d = Math.round((startOfDay(ts) - today()) / DAY);
   const day = { [-1]: 'day.yesterday', 0: 'day.today', 1: 'day.tomorrow' }[d];
-  return (day ? t(day) : ldate('M d, Y', ts)) + ' · ' + ldate('h:i A', ts);
+  return (day ? t(day) : ldate(DF.DATE, ts)) + ' · ' + ldate(DF.TIME, ts);
 }
 export function remRow(r, pt = '', act = '') {
   const ty = RTYPE[r.type] ?? RTYPE.custom;

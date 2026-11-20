@@ -2,7 +2,7 @@
 // This form is the ONLY place where medication is started, changed or stopped, and every change needs a reason.
 // Consultation records are not edited afterwards; a correction is documented as a new consultation.
 import { mount } from '../ui/layout.js';
-import { t, tt, tv, ldate, iso } from '../core/i18n.js';
+import { t, tt, tv, ldate, DF, iso } from '../core/i18n.js';
 import { $, $$, h, ic, qint, url } from '../core/dom.js';
 import { now, toLocalInput, fromLocalInput, addDays, startOfDay } from '../core/time.js';
 import { FREQ, TIMING, UNITS, ROUTES, DRUGS } from '../core/medications.js';
@@ -161,7 +161,7 @@ if (!p) {
   const DKEY = `dms-cdraft-${id}`;
   const snapshot = () => ({ at: now(), labs: $$('.labrow').length, meds: $$('.medrow.new').length,
     v: [...form.elements].filter(x => x.name && x.name !== 'confirm' && x.type !== 'button' && x.type !== 'submit').map(x => [x.name, x.type === 'checkbox' ? (x.checked ? x.value : null) : x.value, x.type === 'checkbox']) });
-  const saveDraft = manual => { local.set(DKEY, snapshot()); const s = $('#draftSt'); s.textContent = t('cf.draft_saved', { t: ldate('h:i A', now()) }); if (manual) s.focus?.(); };
+  const saveDraft = manual => { local.set(DKEY, snapshot()); const s = $('#draftSt'); s.textContent = t('cf.draft_saved', { t: ldate(DF.TIME, now()) }); if (manual) s.focus?.(); };
   const restore = d => {
     for (let i = 0; i < d.labs; i++) addLab();
     for (let i = 0; i < d.meds; i++) $('#addMed').click();
@@ -181,7 +181,7 @@ if (!p) {
   const draft = local.get(DKEY, null);
   if (draft?.v) {
     restore(draft);
-    $('#err').insertAdjacentHTML('beforebegin', `<p class="infobox draftbox" id="draftBox">${ic('note')} <span>${tt('cf.draft_restored', { t: ldate('M d, Y · h:i A', draft.at) })}</span>
+    $('#err').insertAdjacentHTML('beforebegin', `<p class="infobox draftbox" id="draftBox">${ic('note')} <span>${tt('cf.draft_restored', { t: ldate(DF.DATE_TIME, draft.at) })}</span>
       <button type="button" class="lnk" id="draftDel">${tt('cf.draft_discard')}</button></p>`);
     $('#draftDel').onclick = () => { local.set(DKEY, undefined); location.reload(); };
   }

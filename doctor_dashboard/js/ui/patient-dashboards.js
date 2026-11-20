@@ -4,7 +4,7 @@
 // analytics.js). The caller decides where the dashboard lives through `q` (its period / filters, with the keys
 // r, from, to, src, day) and `link(o)` (the URL for changed values), so two dashboards can sit on one page with
 // independent filters.
-import { t, tt, ldate, ltr } from '../core/i18n.js';
+import { t, tt, ldate, DF, ltr } from '../core/i18n.js';
 import { h, dash, signed, ic } from '../core/dom.js';
 import { DAY } from '../core/time.js';
 import { targets, glucoseStats, tirBreakdown, stRange, IMPACT } from '../core/clinical.js';
@@ -48,9 +48,9 @@ export function monitoringView(p, { q, link, extraCtl = '', alerts = null, prese
     return `<div class="arow"${i >= SHOW ? ' hidden data-more' : ''}>
       <bdi class="qty"><b class="v r-${a.st === 'crit' ? 'crit' : a.st}">${h(a.v)}</b> <span>${tt('unit.mgdl')}</span></bdi>
       <span class="pill ${SEVCL[s] ?? 'b-none'}">${tt('al.sev.' + s)}</span>
-      <span class="when">${h(ldate('M d, Y · h:i A', a.at))}</span>
+      <span class="when">${h(ldate(DF.DATE_TIME, a.at))}</span>
       <small>${a.n > 1 ? tt('ab.n', { n: a.n }) : ''}</small>
-      <span class="act">${ak ? `<small>${tt('al.reviewed', { d: ldate('M d · h:i A', ak) })}</small>` : `<a class="btn sm" href="${h(alerts.href(a))}">${tt('al.review')}</a>`}</span>
+      <span class="act">${ak ? `<small>${tt('al.reviewed', { d: ldate(DF.DATE_TIME, ak) })}</small>` : `<a class="btn sm" href="${h(alerts.href(a))}">${tt('al.review')}</a>`}</span>
       ${alertBasis(p, a)}</div>`; };
 
   const html = `<div class="pdash mon${presets ? '' : ' nopre'}" data-dash="glu">
@@ -87,7 +87,7 @@ export function monitoringView(p, { q, link, extraCtl = '', alerts = null, prese
 
   <details class="msec adv"><summary><h2>${tt('glu.history')} <small class="hint">(${rs.length})</small></h2></summary>
     ${rs.length ? `<div class="tscroll"><table class="tbl sm"><thead><tr><th>${tt('ab.c.time')}</th><th>mg/dL</th><th>${tt('ab.c.src')}</th><th>${tt('mon.col.type')}</th><th>${tt('ab.c.class')}</th></tr></thead><tbody>
-      ${rs.map(r => `<tr><td>${h(ldate('M d, Y · h:i A', r.at))}</td><td><b class="r-${r.st}">${h(r.v)}</b></td><td><span class="src s-${r.src === 'cgm' ? 'sensor' : 'manual'}">${tt(r.src === 'cgm' ? 'glu.sensor' : 'glu.manual')}</span></td><td>${h(r.type ?? '')}</td><td>${h(readingLabel(r.st))} ${ltr('(' + stRange(r.st, tg, r.v) + ')')}</td></tr>`).join('')}
+      ${rs.map(r => `<tr><td>${h(ldate(DF.DATE_TIME, r.at))}</td><td><b class="r-${r.st}">${h(r.v)}</b></td><td><span class="src s-${r.src === 'cgm' ? 'sensor' : 'manual'}">${tt(r.src === 'cgm' ? 'glu.sensor' : 'glu.manual')}</span></td><td>${h(r.type ?? '')}</td><td>${h(readingLabel(r.st))} ${ltr('(' + stRange(r.st, tg, r.v) + ')')}</td></tr>`).join('')}
     </tbody></table></div>` : empty('glu.none_period')}</details></div>`;
   // Wire THIS dashboard only (root = its container): custom dates, full alert list
   const wire = root => {
@@ -133,7 +133,7 @@ export function nutritionView(scope, { q, link, all = null, extraCtl = '', detai
   const html = `<div class="pdash nut${presets ? '' : ' nopre'}" data-dash="nut">
   <div class="bar"><h2>${tt('nut.count', { n: meals.length })}</h2>
     <div class="ctl">${rangeControls(rg, url, presets ? KEYS : [])}${extraCtl}</div></div>
-  <p class="tgline">${tt('nut.range_note', { a: ldate('M d', from), b: ldate('M d, Y', to - 1) })}</p>
+  <p class="tgline">${tt('nut.range_note', { a: ldate(DF.DATE, from), b: ldate(DF.DATE, to - 1) })}</p>
   <section class="stats">
     ${card('c-avg', 'meal', t('nut.card.carbs'), avgCarbs === null ? '—' : `${avgCarbs} <span>${tt('unit.g')}</span>`, tt('pf.per_day'))}
     ${card('c-info', 'activity', t('nut.card.kcal'), avgKcal === null ? '—' : `${avgKcal} <span>${tt('meals.kcal')}</span>`, tt('pf.per_day'))}

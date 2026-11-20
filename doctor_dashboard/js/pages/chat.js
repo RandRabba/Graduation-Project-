@@ -1,6 +1,6 @@
 // Chat: messaging is available for every patient assigned to the doctor (no subscription system).
 import { mount } from '../ui/layout.js';
-import { t, tt, ldate } from '../core/i18n.js';
+import { t, tt, ldate, DF } from '../core/i18n.js';
 import { $, h, nl2br, qint } from '../core/dom.js';
 import { getPatients, firstPatientId, getChat, sendMessage, getNotifications, ackNotification } from '../data/api.js';
 import { go } from '../ui/nav.js';
@@ -35,7 +35,7 @@ if (!id) {
       <a class="btn ghost" href="patient.html?id=${id}">${tt('chat.file')}</a>
     </div>
     <div class="msgs" id="msgs">
-      ${msgs.map(m => `<div class="b ${m[0]}"><p dir="auto">${nl2br(m[1])}</p><small>${h(ldate('h:i A', m[2]))}</small></div>`).join('') || empty('chat.start', { name: p.name })}
+      ${msgs.map(m => `<div class="b ${m[0]}"><p dir="auto">${nl2br(m[1])}</p><small>${h(ldate(DF.TIME, m[2]))}</small></div>`).join('') || empty('chat.start', { name: p.name })}
     </div>
     <form class="comp" id="comp">
       <textarea name="text" id="msg" rows="1" dir="auto" required placeholder="${tt('chat.ph')}"></textarea>

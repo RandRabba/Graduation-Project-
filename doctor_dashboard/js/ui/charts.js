@@ -2,7 +2,7 @@
 // string. Rules kept everywhere: the time axis runs left-to-right in both languages; one y-axis per plot
 // (different measures are stacked as panels on the same time axis, never on two scales); every mark has a
 // hover tooltip and the values are also available in a data table; status colors only for status.
-import { t, tt, ldate, ltr, RTL, bidi } from '../core/i18n.js';
+import { t, tt, ldate, DF, dateRange, ltr, RTL, bidi } from '../core/i18n.js';
 import { h } from '../core/dom.js';
 import { DAY, addDays, startOfDay } from '../core/time.js';
 
@@ -15,11 +15,11 @@ export function timeTicks(from, to) {
   const span = to - from, out = [];
   if (span <= 1.01 * DAY) {
     const d0 = new Date(from * 1000); d0.setMinutes(0, 0, 0);
-    for (let ts = Math.floor(d0 / 1000) + 3600; ts <= to; ts += 3600) if (new Date(ts * 1000).getHours() % 3 === 0) out.push([ts, ldate('g A', ts)]);
+    for (let ts = Math.floor(d0 / 1000) + 3600; ts <= to; ts += 3600) if (new Date(ts * 1000).getHours() % 3 === 0) out.push([ts, ldate(DF.HOUR, ts)]);
     return out;
   }
   const days = Math.round(span / DAY), step = days <= 8 ? 1 : days <= 16 ? 2 : days <= 35 ? 5 : 10;
-  for (let ts = addDays(startOfDay(from), 1), i = 0; ts <= to; ts = addDays(ts, 1), i++) if (i % step === 0) out.push([ts, ldate('M d', ts)]);
+  for (let ts = addDays(startOfDay(from), 1), i = 0; ts <= to; ts = addDays(ts, 1), i++) if (i % step === 0) out.push([ts, ldate(DF.SHORT, ts)]);
   return out;
 }
 // Target-range lines with their values (low/high first; 54/250 only if they don't overlap)
@@ -48,7 +48,7 @@ export function glucoseTimeChart({ rs, tg, from, to, meals = [], doses = [], mar
     cur.push(X(r.at) + ',' + Y(r.v)); prev = r.at; }
   if (cur.length > 1) segs.push(cur);
   const rad = asc.length > 200 ? 1.6 : asc.length > 80 ? 2.4 : 3.4;
-  const tip = r => h(`${r.v} mg/dL · ${ldate('M d, h:i A', r.at)} · ${t(r.src === 'cgm' ? 'src.cgm' : 'src.manual')} · ${t(r.st === 'ctrl' ? 'st.reading.ctrl' : 'st.' + r.st)}`);
+  const tip = r => h(`${r.v} mg/dL · ${ldate(DF.SHORT_TIME, r.at)} · ${t(r.src === 'cgm' ? 'src.cgm' : 'src.manual')} · ${t(r.st === 'ctrl' ? 'st.reading.ctrl' : 'st.' + r.st)}`);
   let o = `<svg class="chart gchart" viewBox="0 0 720 ${H}" role="img" aria-label="${h(label)}">
     <rect x="${L}" y="${Y(tg.high)}" width="${R - L}" height="${r1(Y(tg.low) - Y(tg.high))}" class="band"/>${targetLines(tg, L, R, Y)}
     <line x1="${L}" x2="${R}" y1="${B}" y2="${B}" class="grid"/><text x="${L - 6}" y="${T - 2}" text-anchor="end" class="ax">mg/dL</text>
@@ -62,7 +62,7 @@ export function glucoseTimeChart({ rs, tg, from, to, meals = [], doses = [], mar
   const edges = [from, ...asc.map(r => r.at), to];
   for (let i = 1; i < edges.length; i++) if (edges[i] - edges[i - 1] >= DAY) {
     const x1 = X(edges[i - 1]), x2 = X(edges[i]);
-    o += `<rect x="${x1}" y="${T}" width="${r1(x2 - x1)}" height="${B - T}" class="nodata"><title>${h(t('chart.no_data_span', { a: ldate('M d, h:i A', edges[i - 1]), b: ldate('M d, h:i A', edges[i]) }))}</title></rect>`;
+    o += `<rect x="${x1}" y="${T}" width="${r1(x2 - x1)}" height="${B - T}" class="nodata"><title>${h(t('chart.no_data_span', { a: ldate(DF.SHORT_TIME, edges[i - 1]), b: ldate(DF.SHORT_TIME, edges[i]) }))}</title></rect>`;
     if (x2 - x1 > 60) o += `<text x="${r1((x1 + x2) / 2)}" y="${r1((T + B) / 2)}" text-anchor="middle" class="ax">${tt('chart.no_data')}</text>`;
   }
   o += segs.map(s => `<polyline class="cgm" points="${s.join(' ')}"/>`).join('');
@@ -73,9 +73,9 @@ export function glucoseTimeChart({ rs, tg, from, to, meals = [], doses = [], mar
   for (const m of [hi, lo]) o += `<text x="${X(m.at)}" y="${m === hi ? Y(m.v) - 8 : Y(m.v) + 16}" text-anchor="middle" class="mm">${h(m.v)}</text>`;
   // Event strip: meals (size by carbs) and missed doses
   for (const m of meals.filter(m => m.at >= from && m.at <= to)) { const x = X(m.at), s = 3 + Math.min(5, m.carbs / 25);
-    o += `<path d="M${x} ${EV - s}L${r1(x + s)} ${EV + s / 1.2}L${r1(x - s)} ${EV + s / 1.2}Z" class="ev-meal"><title>${h(`${m.name} · ${m.carbs} g ${t('meals.carbs')} · ${ldate('M d, h:i A', m.at)}`)}</title></path>`; }
+    o += `<path d="M${x} ${EV - s}L${r1(x + s)} ${EV + s / 1.2}L${r1(x - s)} ${EV + s / 1.2}Z" class="ev-meal"><title>${h(`${m.name} · ${m.carbs} g ${t('meals.carbs')} · ${ldate(DF.SHORT_TIME, m.at)}`)}</title></path>`; }
   for (const d of doses.filter(d => !d.taken && d.at >= from && d.at <= to)) { const x = X(d.at);
-    o += `<g class="ev-miss"><path d="M${x - 4} ${EV - 4}L${x + 4} ${EV + 4}M${x + 4} ${EV - 4}L${x - 4} ${EV + 4}"/><rect x="${x - 7}" y="${EV - 7}" width="14" height="14" class="hit"/><title>${h(`${t('mon.missed_dose')}: ${d.label} · ${ldate('M d, h:i A', d.at)}`)}</title></g>`; }
+    o += `<g class="ev-miss"><path d="M${x - 4} ${EV - 4}L${x + 4} ${EV + 4}M${x + 4} ${EV - 4}L${x - 4} ${EV + 4}"/><rect x="${x - 7}" y="${EV - 7}" width="14" height="14" class="hit"/><title>${h(`${t('mon.missed_dose')}: ${d.label} · ${ldate(DF.SHORT_TIME, d.at)}`)}</title></g>`; }
   return o + '</svg>';
 }
 export const glucoseLegend = (tg, extra = true) => `<div class="legend"><span><i class="lg dotk"></i>${tt('src.cgm')}</span><span><i class="lg sqk"></i>${tt('glu.manual')}</span>
@@ -101,7 +101,7 @@ export function dailyTrendChart(days, tg, label) {
     <rect x="${L}" y="${Y(tg.high)}" width="${R - L}" height="${r1(Y(tg.low) - Y(tg.high))}" class="band"/>`;
   for (let v = V0; v <= V1; v += step) o += `<line x1="${L}" x2="${R}" y1="${Y(v)}" y2="${Y(v)}" class="grid${v === V0 ? '' : ' faint'}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
   o += `<text x="${L - 6}" y="10" text-anchor="end" class="ax">mg/dL</text>`;
-  days.forEach((d, i) => { if (n <= 8 || i % 2 === (n - 1) % 2) o += `<text x="${X(i)}" y="${H - 4}" text-anchor="middle" class="ax">${h(ldate('M d', d.day))}</text>`; });
+  days.forEach((d, i) => { if (n <= 8 || i % 2 === (n - 1) % 2) o += `<text x="${X(i)}" y="${H - 4}" text-anchor="middle" class="ax">${h(ldate(DF.SHORT, d.day))}</text>`; });
   if (!vs.length) return o + `<text x="${(L + R) / 2}" y="${(T + B) / 2}" text-anchor="middle" class="ax">${tt('glu.none_period')}</text></svg>`;
   // line segments only between consecutive days that have readings
   const segs = []; let cur = [];
@@ -111,7 +111,7 @@ export function dailyTrendChart(days, tg, label) {
   days.forEach((d, i) => {
     const x0 = r1(L + cw * i), lim = d.avg !== null && d.n < TREND_LIMITED;
     const mm = d.avg !== null && d.min != null && d.max != null;
-    const tip = [ldate('D, M d', d.day), d.avg === null ? t('chart.no_data_day') : t('ov.tr.tip_avg', { v: d.avg }),
+    const tip = [ldate(DF.SHORT_DAY, d.day), d.avg === null ? t('chart.no_data_day') : t('ov.tr.tip_avg', { v: d.avg }),
       mm ? t('ov.tr.tip_range', { v: `${d.min}–${d.max} mg/dL` }) : '',
       d.avg === null ? '' : lim ? t('ov.tr.tip_limited', { n: d.n }) : t('ov.tr.tip_n', { n: d.n })].filter(Boolean).join('\n');
     // daily min–max whisker under the average dot (glucose series color, not status colors)
@@ -169,7 +169,10 @@ export function trendPanels({ bs, tg, panels = ['glu', 'carbs', 'kcal', 'adh'], 
   for (const b of bs) o += `<rect x="${X(b.from)}" y="${TOP - 14}" width="${r1(X(b.to) - X(b.from))}" height="${lastY - TOP + 14}" class="hit"><title>${h(bucketTip(b))}</title></rect>`;
   return o + '</svg>';
 }
-export const bucketLabel = b => (b.to - b.from > 1.5 * DAY ? ldate('M d', b.from) + ' – ' + ldate('M d', b.to - 1) : ldate('D, M d', b.from));
+// full = true in data tables (always the year); short in chart tooltips
+export const bucketLabel = (b, full = false) => (b.to - b.from > 1.5 * DAY
+  ? (full ? dateRange(b.from, b.to - 1) : ldate(DF.SHORT, b.from) + ' – ' + ldate(DF.SHORT, b.to - 1))
+  : ldate(full ? DF.DATE : DF.SHORT_DAY, b.from));
 const bucketTip = b => [bucketLabel(b), `${t('chart.p.glu')}: ${b.avg === null ? '—' : `${b.avg} mg/dL (${b.min}–${b.max})`}`,
   `${t('card.tir')}: ${dash(b.tir)}${b.tir === null ? '' : '%'}`, `${t('chart.p.carbs')}: ${dash(b.carbs)} ${t('unit.g')}`, `${t('chart.p.kcal')}: ${dash(b.kcal)}`,
   `${t('chart.p.adh')}: ${b.adh === null ? '—' : `${b.adh}% (${b.taken}/${b.sched})`}`].join('\n');
@@ -234,7 +237,7 @@ export function carbRisePanels(days, label) {
 }
 export const carbRiseLegend = () => `<div class="legend"><span><i class="lg s-glu"></i>${tt('nut.rp.lg_rise')}</span><span><i class="lg s-carbs"></i>${tt('nut.rp.carbs')}</span><span><i class="lg nodk"></i>${tt('nut.rp.lg_nodata')}</span></div>`;
 export const carbRiseTable = days => dataTable([t('chart.col.period'), t('nut.rp.carbs') + ` (${t('unit.g')})`, t('nut.rp.rise') + ' (mg/dL)', t('nut.rp.col_n')],
-  days.map(d => [bucketLabel(d), d.carbs, d.rise !== null ? riseTxt(d.rise) : d.meals ? t('st2.insufficient') : null, d.meals ? `${d.n} / ${d.meals}` : null]));
+  days.map(d => [bucketLabel(d, true), d.carbs, d.rise !== null ? riseTxt(d.rise) : d.meals ? t('st2.insufficient') : null, d.meals ? `${d.n} / ${d.meals}` : null]));
 
 // ===== Time in the five ranges per bucket (100% stacked columns, status colors) =====
 const RANGES = ['vlow', 'low', 'in', 'high', 'vhigh'];
@@ -244,7 +247,7 @@ export function tirColumns(bs, tg, label) {
   let o = `<svg class="chart tircols" viewBox="0 0 720 ${H}" role="img" aria-label="${h(label)}">`;
   for (const v of [0, 50, 100]) o += `<line x1="${L}" x2="${R}" y1="${Y(v)}" y2="${Y(v)}" class="grid faint"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" class="ax">${v}%</text>`;
   bs.forEach((b, i) => {
-    const x = r1(L + i * cw + (cw - bw) / 2), lab = ldate(n > 8 ? 'd' : 'M d', b.from);
+    const x = r1(L + i * cw + (cw - bw) / 2), lab = ldate(n > 8 ? DF.DAY_NUM : DF.SHORT, b.from);
     if (n <= 16 || i % 2 === 0) o += `<text x="${r1(x + bw / 2)}" y="${H - 6}" text-anchor="middle" class="ax">${h(lab)}</text>`;
     if (!b.bd) { o += `<rect x="${x}" y="${T}" width="${r1(bw)}" height="${B - T}" rx="3" class="nodata"><title>${h(bucketLabel(b) + ' · ' + t('glu.no_cgm_short'))}</title></rect>`; return; }
     let acc = 0;
@@ -269,12 +272,12 @@ export function agpChart(prof, tg, label) {
   let o = `<svg class="chart agp" viewBox="0 0 720 ${H}" role="img" aria-label="${h(label)}">
     <rect x="${L}" y="${Y(tg.high)}" width="${R - L}" height="${r1(Y(tg.low) - Y(tg.high))}" class="band"/>${targetLines(tg, L, R, Y)}
     <line x1="${L}" x2="${R}" y1="${B}" y2="${B}" class="grid"/>`;
-  for (let hr = 0; hr <= 24; hr += 3) o += `<text x="${X(hr)}" y="${H - 4}" text-anchor="middle" class="ax">${hr === 24 ? '' : h(ldate('g A', Math.floor(new Date(2020, 0, 1, hr) / 1000)))}</text>`;
+  for (let hr = 0; hr <= 24; hr += 3) o += `<text x="${X(hr)}" y="${H - 4}" text-anchor="middle" class="ax">${hr === 24 ? '' : h(ldate(DF.HOUR, Math.floor(new Date(2020, 0, 1, hr) / 1000)))}</text>`;
   if (pts.length < 2) return o + `<text x="377" y="100" text-anchor="middle" class="ax">${tt('glu.no_cgm_short')}</text></svg>`;
   const area = (a, b) => pts.map(p => `${X(p.h + 0.5)},${Y(p[a])}`).join(' ') + ' ' + pts.slice().reverse().map(p => `${X(p.h + 0.5)},${Y(p[b])}`).join(' ');
   o += `<polygon points="${area('p90', 'p10')}" class="agp-outer"/><polygon points="${area('p75', 'p25')}" class="agp-inner"/>`;
   o += `<polyline points="${pts.map(p => `${X(p.h + 0.5)},${Y(p.p50)}`).join(' ')}" class="s-glu-line"/>`;
-  for (const p of pts) o += `<rect x="${X(p.h)}" y="${T}" width="${r1(X(1) - X(0))}" height="${B - T}" class="hit"><title>${h(`${ldate('g A', Math.floor(new Date(2020, 0, 1, p.h) / 1000))} · ${t('chart.median')} ${p.p50} · 25–75%: ${p.p25}–${p.p75} · 10–90%: ${p.p10}–${p.p90} mg/dL`)}</title></rect>`;
+  for (const p of pts) o += `<rect x="${X(p.h)}" y="${T}" width="${r1(X(1) - X(0))}" height="${B - T}" class="hit"><title>${h(`${ldate(DF.HOUR, Math.floor(new Date(2020, 0, 1, p.h) / 1000))} · ${t('chart.median')} ${p.p50} · 25–75%: ${p.p25}–${p.p75} · 10–90%: ${p.p10}–${p.p90} mg/dL`)}</title></rect>`;
   return o + '</svg>';
 }
 export const agpLegend = () => `<div class="legend"><span><i class="lg s-glu"></i>${tt('chart.median')}</span><span><i class="lg agpi"></i>${tt('chart.iqr')}</span><span><i class="lg agpo"></i>${tt('chart.p1090')}</span></div>`;
@@ -289,7 +292,7 @@ export function mealScatter(points, label) {
     o += `<line x1="${L}" x2="${R}" y1="${Y(v)}" y2="${Y(v)}" class="grid${v === 0 ? '' : ' faint'}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" class="ax">${v > 0 ? '+' + v : v}</text>`;
   for (let v = 0; v <= xm; v += xm / 4) o += `<text x="${X(v)}" y="${B + 16}" text-anchor="middle" class="ax">${v}</text>`;
   o += `<text x="${R}" y="${H - 2}" text-anchor="end" class="ax">${tt('chart.carbs_axis')}</text><text x="${L}" y="${T - 2}" class="ax">${tt('chart.rise_axis')}</text>`;
-  for (const p of points) o += `<g><circle cx="${X(p.carbs)}" cy="${Y(p.rise)}" r="4.5" class="s-carbs-dot"/><circle cx="${X(p.carbs)}" cy="${Y(p.rise)}" r="11" class="hit"/><title>${h(`${p.m.name} · ${ldate('M d, h:i A', p.m.at)} · ${p.carbs} g · ${p.m.before} → ${p.m.after} mg/dL (${p.rise >= 0 ? '+' : ''}${p.rise})`)}</title></g>`;
+  for (const p of points) o += `<g><circle cx="${X(p.carbs)}" cy="${Y(p.rise)}" r="4.5" class="s-carbs-dot"/><circle cx="${X(p.carbs)}" cy="${Y(p.rise)}" r="11" class="hit"/><title>${h(`${p.m.name} · ${ldate(DF.SHORT_TIME, p.m.at)} · ${p.carbs} g · ${p.m.before} → ${p.m.after} mg/dL (${p.rise >= 0 ? '+' : ''}${p.rise})`)}</title></g>`;
   if (!points.length) o += `<text x="377" y="100" text-anchor="middle" class="ax">${tt('meals.none')}</text>`;
   return o + '</svg>';
 }
@@ -310,7 +313,7 @@ export function dataTable(head, rows, summary = t('chart.table')) {
     <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c === null || c === undefined ? '—' : h(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
 }
 export const bucketTable = bs => dataTable([t('chart.col.period'), t('chart.p.glu'), t('chart.col.range'), t('card.tir'), t('chart.col.tbr'), t('chart.p.carbs'), t('chart.p.kcal'), t('chart.p.adh')],
-  bs.map(b => [bucketLabel(b), b.avg, b.min === null ? null : `${b.min}–${b.max}`, b.tir === null ? null : b.tir + '%', b.tbr === null ? null : b.tbr + '%', b.carbs, b.kcal, b.adh === null ? null : `${b.adh}% (${b.taken}/${b.sched})`]));
+  bs.map(b => [bucketLabel(b, true), b.avg, b.min === null ? null : `${b.min}–${b.max}`, b.tir === null ? null : b.tir + '%', b.tbr === null ? null : b.tbr + '%', b.carbs, b.kcal, b.adh === null ? null : `${b.adh}% (${b.taken}/${b.sched})`]));
 
 // ===== Tall segmented bar for part-to-whole (patient status distribution) =====
 export function segBar(parts, total) {
@@ -442,12 +445,12 @@ export function consultChart(items, tg, label) {
   o += `<text x="${L - 6}" y="14" text-anchor="end" class="ax">mg/dL</text>`;
   gs.forEach((c, i) => {
     const cx = r1(L + i * cw + cw / 2);
-    o += `<text x="${cx}" y="${B + 20}" text-anchor="middle" class="cat">${h(c.label)}</text><text x="${cx}" y="${B + 37}" text-anchor="middle" class="ax">${h(ldate('M d, Y', c.at))}</text>`;
+    o += `<text x="${cx}" y="${B + 20}" text-anchor="middle" class="cat">${h(c.label)}</text><text x="${cx}" y="${B + 37}" text-anchor="middle" class="ax">${h(ldate(DF.DATE, c.at))}</text>`;
     const sides = RTL ? [['after', 0], ['before', 1]] : [['before', 0], ['after', 1]];
     for (const [k, j] of sides) {
       const s = c[k], x = r1(cx - bw - 3 + j * (bw + 6));
       if (s.avg === null) { o += `<text x="${r1(x + bw / 2)}" y="${B - 8}" text-anchor="middle" class="ax">—</text>`; continue; }
-      const y = Y(s.avg), tip = [`${t('ch.' + k)} · ${c.label} · ${ldate('M d, Y', c.at)}`, t('st2.tip_avg', { v: s.avg }), t('ch.side_n', { d: s.days, n: s.n })].join('\n');
+      const y = Y(s.avg), tip = [`${t('ch.' + k)} · ${c.label} · ${ldate(DF.DATE, c.at)}`, t('st2.tip_avg', { v: s.avg }), t('ch.side_n', { d: s.days, n: s.n })].join('\n');
       o += `<g class="pt" tabindex="0" data-tip="${h(tip)}" aria-label="${h(tip.replace(/\n/g, ' · '))}"><rect x="${x}" y="${y}" width="${r1(bw)}" height="${r1(B - y)}" rx="4" class="cb-${k}"/>
         <rect x="${x - 2}" y="${T}" width="${r1(bw + 4)}" height="${B - T}" class="hit"/></g><text x="${r1(x + bw / 2)}" y="${y - 6}" text-anchor="middle" class="val sm">${s.avg}</text>`;
     }

@@ -3,7 +3,7 @@
 // follow-up reminders, missed doses and other abnormal glucose readings.
 // Glucose alerts are reviewed in the patient file after looking at the data; others can be marked here.
 import { mount } from '../ui/layout.js';
-import { t, tt, ldate } from '../core/i18n.js';
+import { t, tt, ldate, DF } from '../core/i18n.js';
 import { $, $$, h, ic, qint, url } from '../core/dom.js';
 import { NOTIF_KINDS } from '../core/notify.js';
 import { getPatients, getNotifications, ackNotification } from '../data/api.js';
@@ -23,9 +23,9 @@ const row = n => { const x = notifText(n), pt = all[n.pid]?.name ?? '', lnk = no
   const handled = n.ack && n.auto && n.ack === n.auto;
   return `<div class="row ${n.sev === 'crit' ? 'crit' : n.sev === 'warn' ? 'ctrl' : 'info'} ${n.ack ? 'done' : ''}" data-t="${n.kind}" data-open="${n.ack ? 0 : 1}" data-s="${h(lower(x.title + ' ' + x.sub + ' ' + pt))}">
     <div class="who"><div class="ico">${ic(NICON[n.kind])}</div><div><b>${h(x.title)}</b><small><a href="patient.html?id=${n.pid}" dir="auto">${h(pt)}</a>${x.sub ? ` · ${auto(x.sub)}` : ''}</small></div></div>
-    <div class="val"><span>${h(ldate('M d, Y · h:i A', n.at))}</span></div>
+    <div class="val"><span>${h(ldate(DF.DATE_TIME, n.at))}</span></div>
     <div class="stat"><span class="pill">${tt('nk.' + n.kind)}</span>${n.sev === 'crit' ? `<span class="rng">${tt('n.urgent')}</span>` : ''}</div>
-    <div class="act">${n.ack ? `<small>${handled ? tt('n.handled', { d: ldate('M d · h:i A', n.ack) }) : tt('al.reviewed', { d: ldate('M d · h:i A', n.ack) })}</small> <a class="lnk" href="${h(lnk)}">${tt('n.open')}</a>`
+    <div class="act">${n.ack ? `<small>${handled ? tt('n.handled', { d: ldate(DF.DATE_TIME, n.ack) }) : tt('al.reviewed', { d: ldate(DF.DATE_TIME, n.ack) })}</small> <a class="lnk" href="${h(lnk)}">${tt('n.open')}</a>`
       : n.kind === 'glucose' ? `<a class="btn sm" href="${h(lnk)}">${tt('al.review')}</a>`
       : `<a class="lnk" href="${h(lnk)}">${tt('n.open')}</a> <button class="btn sm" data-ack="${h(n.id)}" data-pid="${n.pid}">${tt('n.mark')}</button>`}</div>
   </div>`; };

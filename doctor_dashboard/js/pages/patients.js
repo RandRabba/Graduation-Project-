@@ -7,7 +7,7 @@
 // entered or scanned in the Patient App at the clinic) and sees the pending / used codes. The QR contains ONLY the
 // code (data/api.js createLinkCode / listLinkCodes / cancelLinkCode).
 import { mount } from '../ui/layout.js';
-import { t, tt, tv, ldate } from '../core/i18n.js';
+import { t, tt, tv, ldate, DF } from '../core/i18n.js';
 import { $, h, ic } from '../core/dom.js';
 import { getPatients, createLinkCode, listLinkCodes, cancelLinkCode, LINK_CODE_RE, LINK_DEMO } from '../data/api.js';
 import { PST, statusPill, awaitingPill, avatar, lower, UNIT, consKind } from '../ui/components.js';
@@ -26,11 +26,11 @@ const card = p => {
       <small>${tt('st2.pid', { id: p.id })} · ${h(meta(p))}</small></div></div>
     <div class="pc-st"><span class="pc-l">${tt('home.col.status')}</span><span class="stblock">${statusPill(p.status)}${p.awaiting ? awaitingPill() : ''}</span></div>
     <div class="pc-gl"><span class="pc-l">${tt('home4.col.last')}</span>${l
-      ? `<bdi class="qty"><b class="v r-${l.st}">${h(l.v)}</b>${UNIT()}</bdi><small>${h(ldate('M d, Y · h:i A', l.at))}</small>`
+      ? `<bdi class="qty"><b class="v r-${l.st}">${h(l.v)}</b>${UNIT()}</bdi><small>${h(ldate(DF.DATE_TIME, l.at))}</small>`
       : `<small>${tt('pats.no_readings')}</small>`}</div>
     <div class="pc-cons"><span class="pc-l">${tt('pats.last_cons')}</span>${lc
-      ? `<span>${h(ldate('M d, Y', lc.at))}</span><small>${h(consKind(lc.kind))}</small>` : `<small>${tt('cons.awaiting')}</small>`}
-      ${p.followUp ? `<small class="fu">${tt('pats.next_fu', { d: ldate('M d, Y', p.followUp.at) })}</small>` : ''}</div>
+      ? `<span>${h(ldate(DF.DATE, lc.at))}</span><small>${h(consKind(lc.kind))}</small>` : `<small>${tt('cons.awaiting')}</small>`}
+      ${p.followUp ? `<small class="fu">${tt('pats.next_fu', { d: ldate(DF.DATE, p.followUp.at) })}</small>` : ''}</div>
     <div class="pc-act"><a class="btn sm" href="patient.html?id=${p.id}">${tt('pats.view')}</a>
       <a class="btn ghost sm" href="consultation.html?id=${p.id}">${ic('steth')} ${p.awaiting ? tt('cons.new_initial') : tt('cons.new')}</a></div>
   </article>`;
@@ -122,7 +122,7 @@ let codes = [];
 async function renderCodes() {
   try { codes = await listLinkCodes(); } catch (e) { lcList.innerHTML = `<p class="lc-none">${tt('link.list_fail')}</p>`; return; }
   lcList.innerHTML = codes.length ? codes.map(c => { const p = c.st === 'pending';
-    return `<div class="lc-item"><div class="lc-who"><b dir="auto">${h(nameOf(c))}</b><small><bdi class="lc-mono" dir="ltr">${h(c.code)}</bdi> · ${h(ldate('M d, Y', c.at))}</small></div>
+    return `<div class="lc-item"><div class="lc-who"><b dir="auto">${h(nameOf(c))}</b><small><bdi class="lc-mono" dir="ltr">${h(c.code)}</bdi> · ${h(ldate(DF.DATE, c.at))}</small></div>
       <span class="pill ${p ? 'b-new' : 'b-none'}">${tt('link.st.' + c.st)}</span>
       ${p ? `<span class="lc-btns"><button type="button" class="btn ghost sm" data-show="${h(c.id)}" aria-label="${tt('link.show_a', { name: nameOf(c) })}">${tt('link.show')}</button><button type="button" class="btn ghost sm" data-cancel="${h(c.id)}" aria-label="${tt('link.cancel_a', { name: nameOf(c) })}">${tt('link.cancel')}</button></span>` : ''}</div>`; }).join('')
     : `<p class="lc-none">${tt('link.none')}</p>`;

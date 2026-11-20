@@ -6,7 +6,7 @@
 // Default sort: clinical priority (Critical → Controlled → Normal → not assessed, then the most urgent flags).
 // URL: ?sort=…&q=…  The tab is not kept in the URL: Home always opens on All Patients.
 import { mount } from '../ui/layout.js';
-import { t, tt, ldate } from '../core/i18n.js';
+import { t, tt, ldate, DF } from '../core/i18n.js';
 import { $, $$, h, ic, params, url } from '../core/dom.js';
 import { needsReview, HOME_SORTS, priorityCompare } from '../core/analytics.js';
 import { getPatients, getDoctor } from '../data/api.js';
@@ -63,7 +63,7 @@ function row(p) {
     <span role="cell" class="who">${avatar(p.name)}<span><b dir="auto">${h(p.name)}</b><small>${tt('st2.pid', { id: p.id })} · ${h(patientMeta(p))}</small></span></span>
     <span role="cell" data-l="${tt('home.col.status')}"><span class="stblock">${statusPill(p.status)}${p.awaiting ? awaitingPill() : ''}</span></span>
     <span role="cell" data-l="${tt('home4.col.last')}">${l ? `<bdi class="qty"><b class="v r-${l.st}">${h(l.v)}</b>${UNIT()}</bdi>${l.st !== p.status ? `<small>${h(readingLabel(l.st))}</small>` : ''}` : `<small>${tt('common.no_data')}</small>`}</span>
-    <span role="cell" data-l="${tt('home4.col.when')}">${l ? `<span class="when">${h(ldate('M d, Y', l.at))}</span><small>${h(ldate('h:i A', l.at))}</small>` : '<small>—</small>'}</span>
+    <span role="cell" data-l="${tt('home4.col.when')}">${l ? `<span class="when">${h(ldate(DF.DATE, l.at))}</span><small>${h(ldate(DF.TIME, l.at))}</small>` : '<small>—</small>'}</span>
     <span class="open">${tt('home2.open_btn')} ${tt('common.chev')}</span></a>`;
 }
 

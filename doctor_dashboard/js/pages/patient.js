@@ -2,7 +2,7 @@
 // Reviewing a glucose alert (?alert=<id>) happens here, after looking at the patient's data.
 // Treatment can only be changed by documenting a consultation (consultation.html).
 import { mount } from '../ui/layout.js';
-import { t, tt, ldate } from '../core/i18n.js';
+import { t, tt, ldate, DF } from '../core/i18n.js';
 import { $, h, ic, params, qint, url } from '../core/dom.js';
 import { DAY, now, today, addDays } from '../core/time.js';
 import { targets, glucoseStats, cgmCoverage, dailyMinMax } from '../core/clinical.js';
@@ -60,7 +60,7 @@ if (!p) {
   <div class="card c-info head">
     ${avatar(p.name, 'avatar big')}
     <div><b class="nm" dir="auto">${h(p.name)}</b><small>${h(patientMeta(p))}</small>
-      ${p.cg || p.linkedAt ? `<small>${[p.cg ? tt('file.caregiver', { v: p.cg }) : '', p.linkedAt ? tt('file.linked', { d: ldate('M d, Y', p.linkedAt) }) : ''].filter(Boolean).join(' · ')}</small>` : ''}</div>
+      ${p.cg || p.linkedAt ? `<small>${[p.cg ? tt('file.caregiver', { v: p.cg }) : '', p.linkedAt ? tt('file.linked', { d: ldate(DF.DATE, p.linkedAt) }) : ''].filter(Boolean).join(' · ')}</small>` : ''}</div>
     ${statusBlock(p)}
     <div class="hact"><a class="btn ghost" href="chat.html?p=${id}">${ic('chat')} ${tt('pf.message')}</a>
       <a class="btn ghost" href="statistics.html?p=${id}">${ic('trend')} ${tt('pf.view_stats')}</a></div>
@@ -69,9 +69,9 @@ if (!p) {
   ${p.awaiting ? `<div class="await-banner">${ic('calendar')}<div><b>${tt('cons.awaiting')}</b><p>${tt('cons.awaiting_short')}</p></div>
     <a class="btn sm" href="consultation.html?id=${id}">${ic('steth')} ${tt('cons.new_initial')}</a></div>` : ''}
   ${alert ? `<div class="row review ${alert.st}">
-    <div class="who"><div class="ico">${ic('alert')}</div><div><b>${tt('file.reviewing', { t: alertTitle(alert) })}</b><small>${h(ldate('M d, Y · h:i A', alert.at))}</small></div></div>
+    <div class="who"><div class="ico">${ic('alert')}</div><div><b>${tt('file.reviewing', { t: alertTitle(alert) })}</b><small>${h(ldate(DF.DATE_TIME, alert.at))}</small></div></div>
     <div class="act"><a class="lnk" href="${h(back)}">${tt('file.back_alerts')}</a>
-      ${done ? `<small>${tt('file.reviewed', { d: ldate('M d · h:i A', done) })}</small>` : `<button class="btn sm" id="ack">${tt('file.mark')}</button>`}</div>
+      ${done ? `<small>${tt('file.reviewed', { d: ldate(DF.DATE_TIME, done) })}</small>` : `<button class="btn sm" id="ack">${tt('file.mark')}</button>`}</div>
     ${alertBasis(p, alert, true)}
   </div>` : ''}
   <div class="tabs" role="tablist">
@@ -80,7 +80,7 @@ if (!p) {
 
   <section class="tab" id="t-ov">
     <div class="stats three">
-      ${card(last ? tone(last.st) : 'c-info', 'drop', t('home.last'), last ? h(last.v) + UNIT() : '—', last ? `${h(readingLabel(last.st))} · ${h(ldate('M d · h:i A', last.at))}` : tt('empty.readings'))}
+      ${card(last ? tone(last.st) : 'c-info', 'drop', t('home.last'), last ? h(last.v) + UNIT() : '—', last ? `${h(readingLabel(last.st))} · ${h(ldate(DF.DATE_TIME, last.at))}` : tt('empty.readings'))}
       ${card('c-avg', 'activity', t('card.avg'), s14.avg === null ? '—' : s14.avg + UNIT(), s14.total ? tt('ov.avg_sub', { n: s14.total }) : tt('home.14d'))}
       ${card('c-avg', 'clock', t('card.tir'), cov14.ok && s14.tir !== null ? s14.tir + '%' : `<span class="na">${tt('home.no_cgm')}</span>`, tt('home.tir_sub', { d: cov14.days, n: cov14.of, g: tg.tir }))}
     </div>
@@ -99,7 +99,7 @@ if (!p) {
     <div class="bar sub"><h2>${tt('pf.open_notif')} <small class="hint">(${openN.length})</small></h2>
       <a class="lnk" href="${h(url('notifications.html', { p: id }))}">${tt('ov.all_notif')}</a></div>
     <div class="list">${openN.slice(0, 5).map(n => { const x = notifText(n);
-      return `<a class="row compact ${n.sev === 'crit' ? 'crit' : n.sev === 'warn' ? 'ctrl' : 'info'}" href="${h(notifLink(n))}"><div class="who"><div class="ico">${ic(NICON[n.kind])}</div><div><b>${h(x.title)}</b><small>${h(ldate('M d · h:i A', n.at))}${x.sub ? ' · ' + auto(x.sub) : ''}</small></div></div><span>${tt('common.chev')}</span></a>`; }).join('') || `<p class="txt">${tt('n.none_open')}</p>`}</div>
+      return `<a class="row compact ${n.sev === 'crit' ? 'crit' : n.sev === 'warn' ? 'ctrl' : 'info'}" href="${h(notifLink(n))}"><div class="who"><div class="ico">${ic(NICON[n.kind])}</div><div><b>${h(x.title)}</b><small>${h(ldate(DF.DATE_TIME, n.at))}${x.sub ? ' · ' + auto(x.sub) : ''}</small></div></div><span>${tt('common.chev')}</span></a>`; }).join('') || `<p class="txt">${tt('n.none_open')}</p>`}</div>
   </section>
 
   <section class="tab" id="t-glu" hidden>
@@ -122,23 +122,23 @@ if (!p) {
     ${p.awaiting ? `<p class="txt">${tt('cons.none_yet')}</p>` : ''}
     <!-- newest first, all collapsed; laboratory results over time are on the patient's Statistics view -->
     <div class="clist">${draft ? `<a class="ccard cdraft" href="consultation.html?id=${id}"><span class="ck">${ic('note')}</span>
-        <span class="cs-t"><b>${tt('cs.draft_title')}</b> <span class="pill rs-draft">${tt('cs.st.draft')}</span><small>${tt('cs.draft_note', { t: ldate('M d, Y · h:i A', draft.at) })}</small></span>
+        <span class="cs-t"><b>${tt('cs.draft_title')}</b> <span class="pill rs-draft">${tt('cs.st.draft')}</span><small>${tt('cs.draft_note', { t: ldate(DF.DATE_TIME, draft.at) })}</small></span>
         <span class="lnk">${tt('cs.draft_open')} ${tt('common.chev')}</span></a>` : ''}${p.consultations.map((c, i) => [c, i]).sort((a, b) => (b[0].at - a[0].at) || (b[1] - a[1])).map(([c]) => consultationCard(c, p)).join('')}</div>
   </section>
 
   <section class="tab list" id="t-rp" hidden>
-    ${p.reports.map(r => `<a class="row pl ok" href="reports.html?p=${id}&amp;r=${r.id}" data-s="${h(lower(reportTitle(r)))}"><div class="who"><div class="ico">${ic('report')}</div><div><b>${h(reportTitle(r))}</b><small>${h(ldate('M d, Y', r.at))}</small></div></div><span></span><span></span><span>${tt('common.chev')}</span></a>`).join('') || empty('file.no_reports')}
+    ${p.reports.map(r => `<a class="row pl ok" href="reports.html?p=${id}&amp;r=${r.id}" data-s="${h(lower(reportTitle(r)))}"><div class="who"><div class="ico">${ic('report')}</div><div><b>${h(reportTitle(r))}</b><small>${h(ldate(DF.DATE, r.at))}</small></div></div><span></span><span></span><span>${tt('common.chev')}</span></a>`).join('') || empty('file.no_reports')}
   </section>
 
   <!-- Communication: five separate panels in a responsive grid (two columns on wide screens, one on small) -->
   <section class="tab" id="t-com" hidden>
     <div class="comgrid">
       <section class="cpanel" aria-labelledby="com-msg"><div class="bar"><h2 id="com-msg">${tt('com.messages')}</h2><a class="lnk" href="chat.html?p=${id}">${tt('com.open_chat')}</a></div>
-        <div class="msgs preview">${chat.slice(-4).map(m => `<div class="b ${m[0]}"><p dir="auto">${h(m[1])}</p><small>${h(ldate('M d · h:i A', m[2]))}</small></div>`).join('') || empty('chat.start', { name: p.name })}</div></section>
+        <div class="msgs preview">${chat.slice(-4).map(m => `<div class="b ${m[0]}"><p dir="auto">${h(m[1])}</p><small>${h(ldate(DF.DATE_TIME, m[2]))}</small></div>`).join('') || empty('chat.start', { name: p.name })}</div></section>
       <section class="cpanel" aria-labelledby="com-req"><h2 id="com-req">${tt('com.requests')}</h2>
         <div class="reqs">${p.requests.map(r => { const n = notifs.find(x => x.id === r.id), st = n?.ack ? 'done' : r.urgent ? 'urgent' : 'open';
           return `<article class="reqcard rq-${st}"><div class="rq-h">${ic('calendar')}<b>${tt('n.request.' + r.kind)}</b><span class="pill ${st === 'done' ? 'b-ok' : st === 'urgent' ? 'b-ctrl' : 'b-new'}">${n?.ack ? tt('com.req_done') : tt('com.req_open')}</span></div>
-            <small class="rq-at">${h(ldate('M d, Y · h:i A', r.at))}</small>${r.note ? `<p class="rq-note">${auto(r.note)}</p>` : ''}
+            <small class="rq-at">${h(ldate(DF.DATE_TIME, r.at))}</small>${r.note ? `<p class="rq-note">${auto(r.note)}</p>` : ''}
             ${n?.ack ? '' : `<a class="btn sm" href="consultation.html?id=${id}">${tt('com.req_doc')}</a>`}</article>`; }).join('') || `<p class="txt">${tt('com.no_requests')}</p>`}</div></section>
       <section class="cpanel" aria-labelledby="com-send"><h2 id="com-send">${tt('com.send_ins')}</h2>
         <form class="ins" id="insForm">
@@ -147,7 +147,7 @@ if (!p) {
           <button type="submit" class="btn">${tt('ins.send')}</button>
         </form></section>
       <section class="cpanel" aria-labelledby="com-sent"><h2 id="com-sent">${tt('ins.sent')}</h2>
-        ${p.ins.length ? `<ul class="inslist">${p.ins.map(i => `<li>${ic('steth')}<div><p dir="auto">${h(i[0])}</p><small>${h(ldate('M d, Y · h:i A', i[1]))}</small></div></li>`).join('')}</ul>` : empty('ins.none')}</section>
+        ${p.ins.length ? `<ul class="inslist">${p.ins.map(i => `<li>${ic('steth')}<div><p dir="auto">${h(i[0])}</p><small>${h(ldate(DF.DATE_TIME, i[1]))}</small></div></li>`).join('')}</ul>` : empty('ins.none')}</section>
     </div>
     <section class="cpanel" aria-labelledby="com-rm"><div class="bar"><h2 id="com-rm">${tt('tab.rm')}</h2><a class="btn ghost sm" href="reminders.html?p=${id}#new">${tt('file.set_rem')}</a></div>
       <div class="list">${rm.map(r => remRow(r)).join('') || empty('file.no_rem')}</div></section>

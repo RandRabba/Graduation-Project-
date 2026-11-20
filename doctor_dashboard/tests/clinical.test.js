@@ -408,6 +408,45 @@ test('Home priority order on the demo patients: Critical → Controlled → Norm
   assert.deepEqual(order.map(p => p.name), ['Sobhi', 'Fofo', 'Soso']);
 });
 
+// ===== Named date formats (js/core/i18n.js DF, dateRange): display only =====
+// English runs here (no localStorage in Node → default language). Arabic needs the language chosen before i18n.js
+// loads, so it runs in a child Node process with a stubbed localStorage. Local time, like the dashboard.
+import { DF, dateRange, ldate } from '../js/core/i18n.js';
+import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+const at = (y, mo, d, hh = 0, mm = 0) => Math.floor(new Date(y, mo - 1, d, hh, mm).getTime() / 1000);
+const FMT_TS = at(2026, 11, 21, 9, 5);   // Sat, Nov 21, 2026 9:05 AM
+test('named date formats (English): one style, year in DATE formats, no leading zeros, " · " before the time', () => {
+  const got = Object.fromEntries(Object.entries(DF).map(([k, f]) => [k, ldate(f, FMT_TS)]));
+  assert.deepEqual(got, {
+    DATE: 'Nov 21, 2026', DATE_TIME: 'Nov 21, 2026 · 9:05 AM', FOLLOW_UP: 'Sat, Nov 21, 2026 · 9:05 AM', TIME: '9:05 AM',
+    SHORT: 'Nov 21', SHORT_TIME: 'Nov 21 · 9:05 AM', SHORT_DAY: 'Sat, Nov 21', HOUR: '9 AM', MONTH: 'Nov 2026', DAY_NUM: '21', WEEKDAY: 'Sat',
+  });
+  assert.equal(ldate(DF.DATE_TIME, at(2026, 11, 8, 7, 3)), 'Nov 8, 2026 · 7:03 AM');
+  assert.equal(ldate(DF.TIME, at(2026, 11, 8, 21, 30)), '9:30 PM');
+  assert.equal(ldate(DF.TIME, at(2026, 11, 8, 0, 15)), '12:15 AM');
+  assert.equal(dateRange(at(2026, 11, 8), at(2026, 11, 20)), 'Nov 8 – Nov 20, 2026');
+  assert.equal(dateRange(at(2026, 12, 28), at(2027, 1, 3)), 'Dec 28, 2026 – Jan 3, 2027');
+});
+test('named date formats (Arabic): day before month, Arabic names, isolated for right-to-left text', () => {
+  const url = pathToFileURL(new URL('../js/core/i18n.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')).href;
+  const code = `globalThis.localStorage = { getItem: k => (k === 'dms-lang' ? 'ar' : null), setItem() {}, removeItem() {} };
+    const { DF, ldate, dateRange } = await import(${JSON.stringify(url)});
+    const out = Object.fromEntries(Object.entries(DF).map(([k, f]) => [k, ldate(f, ${FMT_TS})]));
+    out.RANGE = dateRange(${at(2026, 11, 8)}, ${at(2026, 11, 20)});
+    process.stdout.write(JSON.stringify(out));`;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const raw = JSON.parse(r.stdout), plain = s => s.replace(/[⁦-⁩]/g, '');
+  assert.deepEqual(Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, plain(v)])), {
+    DATE: '21 نوفمبر 2026', DATE_TIME: '21 نوفمبر 2026 · 9:05 ص', FOLLOW_UP: 'السبت، 21 نوفمبر 2026 · 9:05 ص', TIME: '9:05 ص',
+    SHORT: '21 نوفمبر', SHORT_TIME: '21 نوفمبر · 9:05 ص', SHORT_DAY: 'السبت، 21 نوفمبر', HOUR: '9 ص', MONTH: 'نوفمبر 2026',
+    DAY_NUM: '21', WEEKDAY: 'السبت', RANGE: '8 نوفمبر – 20 نوفمبر 2026',
+  });
+  // Arabic phrases are isolated right-to-left (RLI … PDI) and their numbers left-to-right (LRI … PDI)
+  assert.ok(raw.DATE_TIME.startsWith('⁧') && raw.DATE_TIME.includes('⁦'), JSON.stringify(raw.DATE_TIME));
+});
+
 // ===== Patient link codes (js/core/linkcode.js) =====
 import { makeLinkCode, ALPHABET, LINK_CODE_FORMAT, LINK_CODE_RE, LINK_CODE_LEN } from '../js/core/linkcode.js';
 test('makeLinkCode: DMS-XXXX-XXXX-XX, no look-alike characters, unique, collisions drawn again', () => {

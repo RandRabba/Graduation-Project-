@@ -2,7 +2,7 @@
 // printed or saved as PDF. The first report arrives 14 days after the patient's first glucose reading,
 // then a weekly report every 7 days (see autoReports in core/clinical.js).
 import { mount } from '../ui/layout.js';
-import { t, tt, ldate, ltr } from '../core/i18n.js';
+import { t, tt, ldate, DF, dateRange, ltr } from '../core/i18n.js';
 import { $, h, ic, dash, signed, params, qint, url } from '../core/dom.js';
 import { DAY, startOfDay } from '../core/time.js';
 import { targets, glucoseStats, dailyAverages, tirBreakdown, cgmCoverage, periodStatus } from '../core/clinical.js';
@@ -22,7 +22,7 @@ if (rp) {
   const p = all[pid], doc = getDoctor();
   // Calendar days from the day of the first reading to the day it was sent
   const start = rp.from, end = rp.to, days = Math.round((startOfDay(end - 1) - startOfDay(start)) / DAY) + 1;
-  const period = ldate('M d', start) + ' – ' + ldate('M d, Y', end - 1);
+  const period = dateRange(start, end - 1);
   // Everything in the report is calculated only from the patient's data recorded inside the report period
   const inP = x => x.at >= start && x.at < end;
   const rs = p.readings.filter(inP), s = glucoseStats(rs, targets(p));
@@ -71,17 +71,17 @@ if (rp) {
   <p class="txt">${ad.scheduled ? tt('hr.adh_sum', { p: ad.pct, a: ad.taken, b: ad.scheduled, m: ad.missed }) : tt('hr.no_adh')}</p>
 
   <h2 class="sub">${tt('hr.cons')}</h2>
-  <div class="list">${cons.map(c => rowOf('info', 'steth', `${consKind(c.kind)} · ${ldate('M d, Y', c.at)}`, [c.plan, ...txOf(c)].filter(Boolean).join(' · '), true)).join('') || `<p class="txt">${tt('hr.no_cons')}</p>`}</div>
+  <div class="list">${cons.map(c => rowOf('info', 'steth', `${consKind(c.kind)} · ${ldate(DF.DATE, c.at)}`, [c.plan, ...txOf(c)].filter(Boolean).join(' · '), true)).join('') || `<p class="txt">${tt('hr.no_cons')}</p>`}</div>
 
   <h2 class="sub">${tt('hr.meals')}</h2>
   <p class="txt">${!nm ? tt('hr.no_meals') : pairs.length ? t('hr.meals_sum2', { n: nm, c: dash(avgC), d: ltr(signed(avgD)), k: pairs.length })
     : t('hr.meals_sum_insuf', { n: nm, c: dash(avgC) })}</p>
 
   <h2 class="sub">${tt('hr.alerts')}</h2>
-  <div class="list">${al.map(a => rowOf(a.st, 'alert', alertTitle(a), ldate('M d, Y · h:i A', a.at))).join('') || `<p class="txt">${tt('hr.no_alerts')}</p>`}</div>
+  <div class="list">${al.map(a => rowOf(a.st, 'alert', alertTitle(a), ldate(DF.DATE_TIME, a.at))).join('') || `<p class="txt">${tt('hr.no_alerts')}</p>`}</div>
 
   <h2 class="sub">${tt('hr.ins')}</h2>
-  <div class="list">${ins.map(i => rowOf('ok', 'steth', i[0], ldate('M d, Y · h:i A', i[1]), true)).join('') || `<p class="txt">${tt('hr.no_ins')}</p>`}</div>`);
+  <div class="list">${ins.map(i => rowOf('ok', 'steth', i[0], ldate(DF.DATE_TIME, i[1]), true)).join('') || `<p class="txt">${tt('hr.no_ins')}</p>`}</div>`);
 
   // Print / save as PDF from the browser's print dialog (the sidebar and controls are hidden in print)
   $('#print').onclick = () => window.print();
@@ -98,7 +98,7 @@ if (rp) {
   <div class="list">
     ${items.map(it => `<a class="row pl ok" href="${h(url('reports.html', { p: it.pid, r: it.rid }))}" data-s="${h(lower(it.t + ' ' + it.pt))}">
         <div class="who"><div class="ico">${ic('report')}</div><div><b>${h(it.t)}</b><small>${h(it.pt)}</small></div></div>
-        <div class="val"><span>${h(ldate('M d, Y', it.ts))}</span></div>
+        <div class="val"><span>${h(ldate(DF.DATE, it.ts))}</span></div>
         <div class="stat"><span class="pill b-ok">${tt('rep.kind.' + it.kind)}</span>${it.isNew ? ` <span class="pill b-new">${tt('hr.new')}</span>` : ''}</div><span>${tt('common.chev')}</span></a>`).join('') || empty('hr.none')}
   </div>`);
   $('#pick').onchange = e => { location.href = url('reports.html', { p: Number(e.target.value) }); };
