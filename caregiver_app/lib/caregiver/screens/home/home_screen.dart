@@ -7,6 +7,7 @@ import '../../theme/text_styles.dart';
 import '../../widgets/alert_widgets.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_icon.dart';
+import '../../widgets/call_button.dart';
 import '../../widgets/glucose_chart.dart';
 import '../../widgets/latest_reading_hero.dart';
 import '../../widgets/page_frame.dart';
@@ -129,15 +130,39 @@ class _QuickAccess extends StatelessWidget {
         onTap: () => c.selectTab(2),
       ),
       SettingsTile(
-        AppIcons.clock,
-        s.t('remT'),
-        value: upcoming > 0 ? '$upcoming ${s.t('rs_upcoming')}' : null,
-        onTap: () => pushScreen(context, const RemindersScreen()),
+        AppIcons.phone,
+        s.t('emerg'),
+        iconColor: pal.crit,
+        onTap: () => showEmergencySheet(context),
+        trailing: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Flexible(
+                child: Text(
+                  patient.emergencyContact.name.of(ar),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(width: CgGap.sm),
+              CallButton(phone: patient.emergencyContact.phone),
+            ],
+          ),
+        ),
       ),
       SettingsTile(
         AppIcons.syringe,
         s.t('insT'),
         onTap: () => pushScreen(context, const InstructionsScreen()),
+      ),
+      SettingsTile(
+        AppIcons.clock,
+        s.t('remT'),
+        value: upcoming > 0 ? '$upcoming ${s.t('rs_upcoming')}' : null,
+        onTap: () => pushScreen(context, const RemindersScreen()),
       ),
       SettingsTile(
         AppIcons.file,
@@ -149,16 +174,23 @@ class _QuickAccess extends StatelessWidget {
         s.t('ptInfo'),
         onTap: () => pushScreen(context, const PatientInfoScreen()),
       ),
-      SettingsTile(
-        AppIcons.phone,
-        s.t('emerg'),
-        iconColor: pal.crit,
-        value: patient.emergencyContact.name.of(ar),
-        onTap: () => showEmergencySheet(context),
-      ),
     ]);
   }
 }
+
+/// String key for the period a range covers ("Today", "Last 7 days", ...).
+String _periodKey(ChartRange r) => switch (r) {
+      ChartRange.day => 'perDay',
+      ChartRange.week => 'perWeek',
+      ChartRange.month => 'perMonth',
+    };
+
+/// String key explaining what one point of the curve stands for.
+String _chartNoteKey(ChartRange r) => switch (r) {
+      ChartRange.day => 'chartNoteDay',
+      ChartRange.week => 'chartNoteWeek',
+      ChartRange.month => 'chartNoteMonth',
+    };
 
 /// Range tabs, time in range and the glucose curve.
 class _RangeOverview extends StatelessWidget {
@@ -193,7 +225,10 @@ class _RangeOverview extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                SectionTitle(s.t('timeInRange'), subtitle: s.t('target')),
+                SectionTitle(
+                  s.t('timeInRange'),
+                  subtitle: '${s.t(_periodKey(c.range))} · ${s.t('target')}',
+                ),
                 const SizedBox(height: CgGap.lg),
                 TimeInRangeBar(
                   low: stats.lowPercent,
@@ -264,6 +299,7 @@ class _RangeOverview extends StatelessWidget {
               children: <Widget>[
                 SectionTitle(
                   s.t('curve'),
+                  subtitle: s.t(_chartNoteKey(c.range)),
                   action: s.t('tRead'),
                   onAction: () => c.selectTab(1),
                 ),
@@ -285,6 +321,8 @@ class _RangeOverview extends StatelessWidget {
                 const SizedBox(height: CgGap.md),
                 GlucoseChart(
                   values: series.values,
+                  labels: series.labels.map((LocalizedText l) => l.of(ar)).toList(),
+                  unit: s.t('unit'),
                   height: 150,
                   semanticLabel: s.t('chartAlt'),
                 ),

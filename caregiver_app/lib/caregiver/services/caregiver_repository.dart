@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show Listenable;
+
 import '../models/models.dart';
 
 /// Data source for the Caregiver module.
@@ -11,10 +13,26 @@ abstract class CaregiverRepository {
 
   CaregiverProfile get caregiver;
 
-  /// The email address the patient added as a caregiver. Registration is only
-  /// allowed for this address. In production the backend makes this check
-  /// (a pending caregiver link must exist for the email) and returns an error.
+  /// The email address the patient added as a caregiver (demo data). With a
+  /// live backend the "was this email added?" check is made by the backend
+  /// when the caregiver registers, so this is empty there.
   String get invitedEmail;
+
+  /// Fires when a live backend delivers new data. Null for the mock.
+  Listenable? get changes;
+
+  /// Loading, error and "no linked patient" states decided by a live backend.
+  /// Null for the mock: the demo controls choose the state there.
+  DataState? get liveState;
+
+  /// Asks a live backend for fresh data (the "Try again" buttons).
+  Future<void> reload();
+
+  /// The caregiver leaves the patient: the link is removed.
+  Future<void> disconnect();
+
+  /// Saves the caregiver's own name and phone.
+  Future<void> saveCaregiverProfile({required String name, required String phone});
 
   /// Latest reading, or null when the patient has none.
   GlucoseReading? latestReading({required bool stale});

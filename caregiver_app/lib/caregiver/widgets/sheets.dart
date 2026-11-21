@@ -141,15 +141,13 @@ class _EmergencySheet extends StatelessWidget {
           PrimaryButton(
             label: s.t('call'),
             icon: AppIcons.phone,
-            onPressed: () {
+            onPressed: () async {
               final controller = context.cgRead;
-              final String message = controller.strings.t('calling');
-              final ValueChanged<String>? callback = controller.onCall;
+              final String failed = controller.strings.t('callFail');
               Navigator.of(context).pop();
-              if (callback != null) {
-                callback(ec.phone);
-              } else if (outerContext.mounted) {
-                showToast(outerContext, message, aboveNav: true);
+              final bool ok = await controller.callPhone(ec.phone);
+              if (!ok && outerContext.mounted) {
+                showToast(outerContext, '$failed ${ec.phone}', aboveNav: true);
               }
             },
           ),
@@ -342,7 +340,7 @@ class _DemoSheet extends StatelessWidget {
                 SegmentOption<DataState>(DataState.loading, 'Loading'),
                 SegmentOption<DataState>(DataState.staleReading, 'Old reading'),
                 SegmentOption<DataState>(DataState.noReading, 'No reading'),
-                SegmentOption<DataState>(DataState.noAlerts, 'No alerts'),
+                SegmentOption<DataState>(DataState.noAlerts, 'No notifications'),
                 SegmentOption<DataState>(DataState.error, 'Error'),
                 SegmentOption<DataState>(DataState.revoked, 'Access revoked'),
                 SegmentOption<DataState>(DataState.noPatient, 'No linked patient'),

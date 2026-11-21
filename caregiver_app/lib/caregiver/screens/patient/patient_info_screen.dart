@@ -43,12 +43,15 @@ class PatientInfoScreen extends StatelessWidget {
               Avatar(p.initials.of(ar), size: 76, fontSize: 24, label: s.t('avatarAlt')),
               const SizedBox(height: CgGap.md),
               Semantics(header: true, child: Text(p.name.of(ar), style: t.titleLarge)),
-              const SizedBox(height: CgGap.sm),
-              Semantics(
-                label: '${s.t('ptStatus')}: ${s.t(statusKey)}',
-                excludeSemantics: true,
-                child: StatusPill(s.t(statusKey), pal.fg(statusTone)),
-              ),
+              // The status comes from the readings: none before the first one.
+              if (c.latestReading != null) ...<Widget>[
+                const SizedBox(height: CgGap.sm),
+                Semantics(
+                  label: '${s.t('ptStatus')}: ${s.t(statusKey)}',
+                  excludeSemantics: true,
+                  child: StatusPill(s.t(statusKey), pal.fg(statusTone)),
+                ),
+              ],
             ],
           ),
         ),
@@ -84,7 +87,7 @@ class PatientInfoScreen extends StatelessWidget {
                           TextSpan(
                             children: <InlineSpan>[
                               TextSpan(text: '${ec.relation.of(ar)} · '),
-                              TextSpan(text: '⁦${ec.phone}⁩'),
+                              TextSpan(text: '\u2066${ec.phone}\u2069'),
                             ],
                           ),
                           style: t.bodyMedium,

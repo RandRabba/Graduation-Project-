@@ -109,29 +109,30 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadow: Color(0x1A0A6E9A),
   );
 
-  // Low-glare dark: desaturated slate-navy, soft off-white text and a muted cyan accent.
+  // Graphite & Periwinkle: neutral charcoal surfaces, soft periwinkle accent
+  // that stays clear of every status hue (same as the Patient app).
   static const AppPalette dark = AppPalette(
-    bg: Color(0xFF0F1A24),
-    card: Color(0xFF16232F),
-    text: Color(0xFFD9E3EA),
-    sub: Color(0xFF94A6B4),
-    hint: Color(0xFF64798A),
-    line: Color(0xFF263746),
-    input: Color(0xFF1C2B38),
-    pri: Color(0xFF5CC8D8),
-    acc: Color(0xFF5CC8D8),
-    onPri: Color(0xFF0B1F27),
-    soft: Color(0xFF1B3440),
+    bg: Color(0xFF121316),
+    card: Color(0xFF1B1D22),
+    text: Color(0xFFE6E7EA),
+    sub: Color(0xFFA0A4AD),
+    hint: Color(0xFF6C717B),
+    line: Color(0xFF30343B),
+    input: Color(0xFF23262C),
+    pri: Color(0xFFA9B4FF),
+    acc: Color(0xFF8C9BFF),
+    onPri: Color(0xFF14183A),
+    soft: Color(0xFF262A45),
     ok: Color(0xFF6FCF97),
-    ctl: Color(0xFF5CC8D8),
+    ctl: Color(0xFFA9B4FF),
     high: Color(0xFFE6C36A),
     low: Color(0xFFF0A070),
     crit: Color(0xFFEF7B7B),
-    heroStart: Color(0xFF1D3B4B),
-    heroEnd: Color(0xFF15283A),
-    ctaStart: Color(0xFF68D0DE),
-    ctaEnd: Color(0xFF4BB4C8),
-    shadow: Color(0x33000000),
+    heroStart: Color(0xFF2A2F55),
+    heroEnd: Color(0xFF1A1D33),
+    ctaStart: Color(0xFFB3BDFF),
+    ctaEnd: Color(0xFF95A3F5),
+    shadow: Color(0x40000000),
   );
 
   // ---- Derived tokens ------------------------------------------------------

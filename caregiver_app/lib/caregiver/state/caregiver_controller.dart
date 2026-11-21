@@ -1,24 +1,51 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
 import '../l10n/app_strings.dart';
 import '../models/models.dart';
+import '../services/caregiver_auth.dart';
 import '../services/caregiver_repository.dart';
+import '../services/mock_caregiver_auth.dart';
 import '../services/mock_caregiver_repository.dart';
+import '../utils/dialer.dart';
 
 /// Single source of truth for the Caregiver module (UI state and data access).
 ///
 /// All reads of patient data go through [repository] with the current
 /// [level] (fixed to extended: the caregiver sees one read-only set of
-/// screens, see [AccessLevel]).
+/// screens, see [AccessLevel]). Sign in and registration go through [auth].
 class CaregiverController extends ChangeNotifier {
   CaregiverController({
     CaregiverRepository? repository,
-    this.showDemoControls = true,
+    CaregiverAuth? auth,
+    this.showDemoControls = false,
     this.onExit,
-  }) : repository = repository ?? MockCaregiverRepository();
+  })  : repository = repository ?? MockCaregiverRepository(),
+        _auth = auth {
+    // A live backend reports new data (and loading / error states) here.
+    this.repository.changes?.addListener(notifyListeners);
+  }
 
   final CaregiverRepository repository;
+
+  final CaregiverAuth? _auth;
+
+  /// Sign in, registration and password handling. The demo implementation is
+  /// used unless the host passes a real one.
+  late final CaregiverAuth auth = _auth ??
+      MockCaregiverAuth(repository: repository, isPatientAccount: () => _roleIsPatient);
+
+  /// True when [repository] is a live backend, so the demo data-state
+  /// controls have no say.
+  bool get isLive => repository.liveState != null;
+
+  @override
+  void dispose() {
+    repository.changes?.removeListener(notifyListeners);
+    super.dispose();
+  }
 
   /// Shows the prototype controls (theme, language, data states...).
   /// Turn off in the integrated app.
@@ -28,9 +55,20 @@ class CaregiverController extends ChangeNotifier {
   VoidCallback? onExit;
 
   /// Called with the emergency contact's phone number when the caregiver
-  /// taps "Call now". The host app can wire this to `url_launcher`.
-  /// When null, the module shows a placeholder message instead.
+  /// taps a call button. The host app can wire this to its own dialer.
+  /// When null, the module opens the device dialer itself (`tel:` link).
   ValueChanged<String>? onCall;
+
+  /// Calls [phone]: through [onCall] when the host supplied one, otherwise
+  /// with the device dialer. Returns false when no call could be started.
+  Future<bool> callPhone(String phone) async {
+    final ValueChanged<String>? hook = onCall;
+    if (hook != null) {
+      hook(phone);
+      return true;
+    }
+    return dialPhone(phone);
+  }
 
   // ---- Session and appearance -------------------------------------------
   AccessLevel _level = AccessLevel.extended;
@@ -43,7 +81,10 @@ class CaregiverController extends ChangeNotifier {
   AccessLevel get level => _level;
   ThemeMode get themeMode => _themeMode;
   bool get arabic => _arabic;
-  DataState get dataState => _dataState;
+
+  /// A live backend decides the state (loading, error, no linked patient);
+  /// otherwise the demo controls do.
+  DataState get dataState => repository.liveState ?? _dataState;
 
   /// Demo only: pretend the backend returned the PATIENT role after login.
   bool get roleIsPatient => _roleIsPatient;
@@ -107,6 +148,15 @@ class CaregiverController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True when the readings list is narrowed by type or source.
+  bool get filtersActive => _typeFilter != 'all' || _sourceFilter != 'all';
+
+  void resetFilters() {
+    _typeFilter = 'all';
+    _sourceFilter = 'all';
+    notifyListeners();
+  }
+
   /// The reading shown as "latest", or null for the "no reading" state.
   GlucoseReading? get latestReading => _dataState == DataState.noReading
       ? null
@@ -149,6 +199,7 @@ class CaregiverController extends ChangeNotifier {
     _profileName = name.trim().isEmpty ? null : name.trim();
     _profilePhone = phone.trim().isEmpty ? null : phone.trim();
     notifyListeners();
+    unawaited(repository.saveCaregiverProfile(name: name, phone: phone));
   }
 
   // ---- Setters used by settings and demo controls -------------------------
@@ -187,12 +238,29 @@ class CaregiverController extends ChangeNotifier {
     _tabIndex = 0;
     _resetTick++;
     notifyListeners();
+    unawaited(repository.disconnect());
+  }
+
+  /// "Try again" / "Check again": a live backend loads everything again.
+  void refresh() {
+    if (isLive) unawaited(repository.reload());
+  }
+
+  /// Signs out and clears what the previous account was looking at.
+  Future<void> signOut() async {
+    await auth.signOut();
+    _tabIndex = 0;
+    _resetTick++;
+    _dataState = DataState.normal;
+    _profileName = null;
+    _profilePhone = null;
+    resetFilters();
   }
 
   /// Blocking states replace every screen except Profile and its settings.
   bool get isBlocking =>
-      _dataState == DataState.loading ||
-      _dataState == DataState.error ||
-      _dataState == DataState.revoked ||
-      _dataState == DataState.noPatient;
+      dataState == DataState.loading ||
+      dataState == DataState.error ||
+      dataState == DataState.revoked ||
+      dataState == DataState.noPatient;
 }

@@ -48,14 +48,23 @@ class _MessageView extends StatelessWidget {
     final s = c.strings;
     switch (state) {
       case DataState.error:
-        c.setDataState(DataState.normal);
-        showToast(context, s.t('updated'), aboveNav: true);
+        if (c.isLive) {
+          // A live backend loads again and shows its own loading state.
+          c.refresh();
+        } else {
+          c.setDataState(DataState.normal);
+          showToast(context, s.t('updated'), aboveNav: true);
+        }
         break;
       case DataState.revoked:
         c.setDataState(DataState.noPatient);
         break;
       case DataState.noPatient:
-        showToast(context, s.t('noNew'), aboveNav: true);
+        if (c.isLive) {
+          c.refresh();
+        } else {
+          showToast(context, s.t('noNew'), aboveNav: true);
+        }
         break;
       default:
         break;

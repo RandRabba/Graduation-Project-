@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "caregiverNotifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverEmail", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

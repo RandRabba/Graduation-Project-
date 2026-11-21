@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show Listenable;
+
 import '../models/models.dart';
 import 'caregiver_repository.dart';
 
-/// Demonstration data. Clearly separated from real backend data: swap this
-/// class for an HTTP-backed [CaregiverRepository] in the integrated app.
+/// Demonstration data. Clearly separated from real backend data: the real app
+/// uses `FirebaseCaregiverRepository` instead (`--dart-define=BACKEND=firebase`).
 class MockCaregiverRepository implements CaregiverRepository {
   MockCaregiverRepository();
 
@@ -33,8 +35,25 @@ class MockCaregiverRepository implements CaregiverRepository {
   @override
   final String invitedEmail = 'nour.haddad@example.com';
 
+  // The mock has no backend: nothing changes behind the screens' back, and
+  // the demo controls decide the loading / error / no-patient states.
+  @override
+  Listenable? get changes => null;
+
+  @override
+  DataState? get liveState => null;
+
+  @override
+  Future<void> reload() async {}
+
+  @override
+  Future<void> disconnect() async {}
+
+  @override
+  Future<void> saveCaregiverProfile({required String name, required String phone}) async {}
+
   static final List<GlucoseReading> _readings = <GlucoseReading>[
-    GlucoseReading(id: 'r1', value: 168, type: ReadingType.ppbs, source: ReadingSource.sensor, time: DateTime(2026, 10, 30, 8, 12), cls: GlucoseClass.high),
+    GlucoseReading(id: 'r1', value: 196, type: ReadingType.ppbs, source: ReadingSource.sensor, time: DateTime(2026, 10, 30, 8, 12), cls: GlucoseClass.high),
     GlucoseReading(id: 'r2', value: 104, type: ReadingType.fbs, source: ReadingSource.manual, time: DateTime(2026, 10, 30, 7, 5), cls: GlucoseClass.ok),
     GlucoseReading(id: 'r3', value: 62, type: ReadingType.rbs, source: ReadingSource.sensor, time: DateTime(2026, 10, 29, 21, 40), cls: GlucoseClass.low),
     GlucoseReading(id: 'r4', value: 214, type: ReadingType.rbs, source: ReadingSource.manual, time: DateTime(2026, 10, 29, 18, 15), cls: GlucoseClass.high),
@@ -73,7 +92,7 @@ class MockCaregiverRepository implements CaregiverRepository {
 
   static final Map<ChartRange, ChartSeries> _charts = <ChartRange, ChartSeries>{
     ChartRange.day: ChartSeries(
-      const <int>[121, 109, 98, 104, 168],
+      const <int>[121, 109, 98, 104, 196],
       _plain(const <String>['00:00', '02:00', '04:00', '06:00', '08:00']),
     ),
     ChartRange.week: const ChartSeries(
@@ -88,14 +107,14 @@ class MockCaregiverRepository implements CaregiverRepository {
 
   static const Map<ChartRange, RangeStats> _stats = <ChartRange, RangeStats>{
     ChartRange.day: RangeStats(
-      average: 120,
+      average: 126,
       inRangePercent: 80,
       lowPercent: 0,
       highPercent: 20,
       lowest: 98,
-      highest: 168,
+      highest: 196,
       count: 5,
-      trend: LocalizedText('+64 mg/dL since 07:05', '+64 mg/dL منذ 07:05'),
+      trend: LocalizedText('+92 mg/dL since 07:05', '+92 mg/dL منذ 07:05'),
     ),
     ChartRange.week: RangeStats(
       average: 156,
@@ -121,7 +140,7 @@ class MockCaregiverRepository implements CaregiverRepository {
 
   static const Map<ReportPeriod, List<HealthReport>> _reports = <ReportPeriod, List<HealthReport>>{
     ReportPeriod.daily: <HealthReport>[
-      HealthReport(period: ReportPeriod.daily, index: 0, label: LocalizedText('Today so far, Oct 30', 'اليوم حتى الآن، 30 أكتوبر'), average: 120, lowest: 98, highest: 168, count: 5, inRange: 4, high: 1, low: 0, critical: 0, abnormal: 1, criticalAlerts: 0, trend: LocalizedText('+8% vs yesterday', '+8% عن أمس')),
+      HealthReport(period: ReportPeriod.daily, index: 0, label: LocalizedText('Today so far, Oct 30', 'اليوم حتى الآن، 30 أكتوبر'), average: 126, lowest: 98, highest: 196, count: 5, inRange: 4, high: 1, low: 0, critical: 0, abnormal: 1, criticalAlerts: 0, trend: LocalizedText('+8% vs yesterday', '+8% عن أمس')),
       HealthReport(period: ReportPeriod.daily, index: 1, label: LocalizedText('Yesterday, Oct 29', 'أمس، 29 أكتوبر'), average: 157, lowest: 62, highest: 342, count: 6, inRange: 3, high: 1, low: 1, critical: 1, abnormal: 3, criticalAlerts: 1, trend: LocalizedText('-5% vs previous day', '-5% عن اليوم السابق')),
     ],
     ReportPeriod.weekly: <HealthReport>[

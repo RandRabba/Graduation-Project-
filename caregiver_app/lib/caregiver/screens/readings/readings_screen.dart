@@ -50,7 +50,7 @@ class ReadingsScreen extends StatelessWidget {
         c.range != ChartRange.day;
 
     final List<Widget> rows = <Widget>[
-      if (showHba && hba != null) _HbaRow(record: hba),
+      if (showHba) _HbaRow(record: hba),
       for (final GlucoseReading r in records) _ReadingRow(reading: r),
     ];
 
@@ -95,9 +95,20 @@ class ReadingsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: CgGap.md),
+                Text(
+                  s.t(switch (c.range) {
+                    ChartRange.day => 'chartNoteDay',
+                    ChartRange.week => 'chartNoteWeek',
+                    ChartRange.month => 'chartNoteMonth',
+                  }),
+                  style: t.labelSmall,
+                ),
+                const SizedBox(height: CgGap.sm),
                 GlucoseChart(
                   values: series.values,
-                  height: 150,
+                  labels: series.labels.map((LocalizedText l) => l.of(ar)).toList(),
+                  unit: s.t('unit'),
+                  height: 160,
                   semanticLabel: s.t('chartAlt'),
                 ),
                 ChartLabels(series.labels.map((LocalizedText l) => l.of(ar)).toList()),
@@ -117,8 +128,24 @@ class ReadingsScreen extends StatelessWidget {
               ],
             ),
           ),
-        Text(s.t('fType'), style: t.labelMedium!.copyWith(color: pal.sub)),
-        const SizedBox(height: 6),
+        Row(
+          children: <Widget>[
+            Expanded(child: Text(s.t('fType'), style: t.labelMedium!.copyWith(color: pal.sub))),
+            if (c.filtersActive)
+              TextButton.icon(
+                onPressed: c.resetFilters,
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: Text(s.t('fReset')),
+                style: TextButton.styleFrom(
+                  foregroundColor: pal.pri,
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: CgGap.sm),
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 2),
         ChoicePills<String>(
           options: <SegmentOption<String>>[
             SegmentOption<String>('all', s.t('fAll')),
@@ -157,12 +184,20 @@ class ReadingsScreen extends StatelessWidget {
               ],
             ),
           )
-        else
+        else ...<Widget>[
           EmptyState(
             icon: AppIcons.chart,
             title: s.t('noMatch'),
             message: s.t('readOnly'),
           ),
+          if (c.filtersActive)
+            Center(
+              child: TextButton(
+                onPressed: c.resetFilters,
+                child: Text(s.t('fReset')),
+              ),
+            ),
+        ],
         if (rows.isNotEmpty) LockNote(s.t('readOnly'), center: true),
       ],
     );

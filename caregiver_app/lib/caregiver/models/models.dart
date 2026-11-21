@@ -56,7 +56,7 @@ extension GlucoseClassX on GlucoseClass {
   }
 
   /// Key into the string table, e.g. `c_critHigh`.
-  String get key => 'c_${this.name}';
+  String get key => 'c_$name';
 
   /// Non-colour cue so the class is readable without colour perception.
   String get glyph {
@@ -77,14 +77,14 @@ extension GlucoseClassX on GlucoseClass {
 enum ReadingType { fbs, rbs, ppbs }
 
 extension ReadingTypeX on ReadingType {
-  String get key => 'ty_${this.name.toUpperCase()}';
-  String get code => this.name.toUpperCase();
+  String get key => 'ty_${name.toUpperCase()}';
+  String get code => name.toUpperCase();
 }
 
 enum ReadingSource { sensor, manual, simulator }
 
 extension ReadingSourceX on ReadingSource {
-  String get key => 'src_${this.name}';
+  String get key => 'src_$name';
 }
 
 class GlucoseReading {

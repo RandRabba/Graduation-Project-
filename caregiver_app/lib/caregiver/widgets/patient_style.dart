@@ -289,7 +289,7 @@ class StatusPill extends StatelessWidget {
             Container(
               width: 8,
               height: 8,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: fg),
             ),
           const SizedBox(width: 6),
           Flexible(
@@ -526,6 +526,9 @@ class TimeInRangeBar extends StatelessWidget {
           child: segments.isEmpty
               ? ColoredBox(color: pal.line, child: const SizedBox.expand())
               : Row(
+                  // Stretch, so the coloured boxes fill the bar's height. Without
+                  // it they have no child and collapse to zero height.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     for (final (int v, Color c) in segments)
                       Expanded(

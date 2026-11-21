@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../state/caregiver_scope.dart';
 import '../../theme/app_palette.dart';
@@ -11,6 +10,7 @@ import '../../widgets/buttons.dart';
 import '../../widgets/toast.dart';
 import 'auth_frame.dart';
 import 'register_screen.dart';
+import '../../services/caregiver_auth.dart';
 import 'session_routes.dart';
 
 /// One shared login. The backend decides the role after sign in, so nobody
@@ -26,7 +26,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
-  bool _error = false;
+  /// String-table key of the current error, or null.
+  String? _errorKey;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -45,20 +47,57 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
+    if (_busy) return;
+    final c = context.cgRead;
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _error = true);
+      setState(() => _errorKey = 'errLogin');
       return;
     }
-    setState(() => _error = false);
-    // The backend decides the role after sign in. A caregiver goes straight
-    // to the dashboard: there is no verification or invitation step.
-    if (context.cgRead.roleIsPatient) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (BuildContext _) => const PatientStubScreen()),
+    setState(() {
+      _errorKey = null;
+      _busy = true;
+    });
+    try {
+      // The backend decides the role after sign in. A caregiver goes straight
+      // to the dashboard: there is no verification or invitation step.
+      final SignInOutcome outcome = await c.auth.signIn(
+        email: _email.text,
+        password: _password.text,
       );
-    } else {
-      openDashboard(context);
+      if (!mounted) return;
+      if (outcome == SignInOutcome.patientAccount) {
+        setState(() => _busy = false);
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (BuildContext _) => const PatientStubScreen()),
+        );
+      } else {
+        openDashboard(context);
+      }
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorKey = e.key;
+        _busy = false;
+      });
+    }
+  }
+
+  Future<void> _forgot() async {
+    final c = context.cgRead;
+    final String email = _email.text.trim();
+    if (email.isEmpty) {
+      setState(() => _errorKey = 'errResetEmail');
+      return;
+    }
+    try {
+      await c.auth.sendPasswordReset(email);
+      if (!mounted) return;
+      setState(() => _errorKey = null);
+      showToast(context, c.strings.t('resetSent'));
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _errorKey = e.key);
     }
   }
 
@@ -96,21 +135,21 @@ class _LoginScreenState extends State<LoginScreen> {
               alignment: AlignmentDirectional.centerStart,
               child: TextLinkButton(
                 s.t('forgot'),
-                onPressed: () => showToast(context, s.t('resetSent')),
+                onPressed: _busy ? null : _forgot,
               ),
             ),
-            if (_error)
+            if (_errorKey != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Semantics(
                   liveRegion: true,
                   child: Text(
-                    s.t('errLogin'),
+                    s.t(_errorKey!),
                     style: TextStyle(color: pal.crit, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
-            PrimaryButton(label: s.t('login'), onPressed: _login),
+            PrimaryButton(label: s.t('login'), onPressed: _busy ? null : _login),
             const SizedBox(height: 18),
             AppCard(
               color: pal.soft,

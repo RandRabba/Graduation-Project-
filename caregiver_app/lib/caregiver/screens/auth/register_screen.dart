@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../services/caregiver_auth.dart';
 import '../../state/caregiver_scope.dart';
 import '../../theme/app_palette.dart';
 import '../../theme/text_styles.dart';
@@ -18,9 +18,8 @@ import 'session_routes.dart';
 /// confirms it and goes straight into the app: no email verification and no
 /// invitation step.
 ///
-/// The "is this email invited?" check is done against the repository in the
-/// prototype. In production the backend must make it (a pending caregiver
-/// link has to exist for the email) and answer with an error otherwise.
+/// The "is this email invited?" check belongs to the backend: `auth.register`
+/// throws `AuthFailure('errNoInvite')` when no patient added the email.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -35,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   /// String-table key of the current error, or null.
   String? _errorKey;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -52,14 +52,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
+  Future<void> _register() async {
+    if (_busy) return;
+    final c = context.cgRead;
     final String email = _email.text.trim();
     if (email.isEmpty || _password.text.isEmpty || _confirm.text.isEmpty) {
       setState(() => _errorKey = 'errFill');
-      return;
-    }
-    if (email.toLowerCase() != context.cgRead.repository.invitedEmail.toLowerCase()) {
-      setState(() => _errorKey = 'errNoInvite');
       return;
     }
     if (_password.text.length < 8) {
@@ -70,8 +68,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _errorKey = 'errMatch');
       return;
     }
-    setState(() => _errorKey = null);
-    openDashboard(context);
+    setState(() {
+      _errorKey = null;
+      _busy = true;
+    });
+    try {
+      await c.auth.register(email: email, password: _password.text);
+      if (!mounted) return;
+      openDashboard(context);
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorKey = e.key;
+        _busy = false;
+      });
+    }
   }
 
   @override
@@ -143,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             const SizedBox(height: 20),
-            PrimaryButton(label: s.t('createAcc'), onPressed: _register),
+            PrimaryButton(label: s.t('createAcc'), onPressed: _busy ? null : _register),
             const SizedBox(height: 16),
             Center(
               child: Wrap(

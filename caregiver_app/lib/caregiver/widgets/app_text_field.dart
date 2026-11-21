@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../state/caregiver_scope.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
 /// Labelled text field. [compact] is the 46px profile-form variant; the
-/// default is the 52px sign-in variant.
-class AppTextField extends StatelessWidget {
+/// default is the 52px sign-in variant. A field with [obscure] set gets a
+/// show/hide button so the caregiver can check what was typed.
+class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
     required this.label,
@@ -43,8 +45,17 @@ class AppTextField extends StatelessWidget {
   final double topSpacing;
 
   @override
+  State<AppTextField> createState() => _AppTextFieldState();
+}
+
+class _AppTextFieldState extends State<AppTextField> {
+  late bool _hidden = widget.obscure;
+
+  @override
   Widget build(BuildContext context) {
+    final AppTextField w = widget;
     final pal = context.pal;
+    final s = context.s;
     // Same field style as the Patient app: filled, no idle outline, primary focus ring.
     OutlineInputBorder border(BorderSide side) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.md),
@@ -52,7 +63,7 @@ class AppTextField extends StatelessWidget {
         );
 
     return Padding(
-      padding: EdgeInsets.only(top: topSpacing),
+      padding: EdgeInsets.only(top: w.topSpacing),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -61,50 +72,61 @@ class AppTextField extends StatelessWidget {
               children: <Widget>[
                 Flexible(
                   child: Text(
-                    label,
+                    w.label,
                     style: context.subStyle(13, FontWeight.w600),
                   ),
                 ),
-                if (badge != null) ...<Widget>[
+                if (w.badge != null) ...<Widget>[
                   const SizedBox(width: 8),
-                  badge!,
+                  w.badge!,
                 ],
               ],
             ),
           ),
-          SizedBox(height: compact ? 4 : 6),
+          SizedBox(height: w.compact ? 4 : 6),
           Semantics(
-            label: label,
+            label: w.label,
             textField: true,
             child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              obscureText: obscure,
-              enabled: enabled,
-              textDirection: ltr ? TextDirection.ltr : null,
-              autofillHints: autofillHints,
-              textInputAction: textInputAction,
-              onSubmitted: onSubmitted,
-              onChanged: onChanged,
+              controller: w.controller,
+              keyboardType: w.keyboardType,
+              obscureText: _hidden,
+              enabled: w.enabled,
+              textDirection: w.ltr ? TextDirection.ltr : null,
+              autofillHints: w.autofillHints,
+              textInputAction: w.textInputAction,
+              onSubmitted: w.onSubmitted,
+              onChanged: w.onChanged,
               cursorColor: pal.sec,
               style: TextStyle(
-                fontSize: compact ? 14.5 : 15,
+                fontSize: w.compact ? 14.5 : 15,
                 height: 1.2,
-                color: enabled ? pal.text : pal.sub,
+                color: w.enabled ? pal.text : pal.sub,
               ),
               decoration: InputDecoration(
                 isDense: true,
                 filled: true,
-                fillColor: enabled ? pal.input : pal.bg,
+                fillColor: w.enabled ? pal.input : pal.bg,
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: compact ? 12 : 14,
-                  vertical: compact ? 14 : 17,
+                  horizontal: w.compact ? 12 : 14,
+                  vertical: w.compact ? 14 : 17,
                 ),
                 hintStyle: TextStyle(color: pal.hint),
                 border: border(BorderSide.none),
                 enabledBorder: border(BorderSide.none),
                 disabledBorder: border(BorderSide.none),
                 focusedBorder: border(BorderSide(color: pal.pri, width: 1.5)),
+                suffixIcon: w.obscure
+                    ? IconButton(
+                        tooltip: s.t(_hidden ? 'pwShow' : 'pwHide'),
+                        onPressed: () => setState(() => _hidden = !_hidden),
+                        icon: Icon(
+                          _hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          size: 22,
+                          color: pal.sub,
+                        ),
+                      )
+                    : null,
               ),
             ),
           ),

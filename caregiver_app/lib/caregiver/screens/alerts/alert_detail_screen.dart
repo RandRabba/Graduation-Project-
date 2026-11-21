@@ -49,47 +49,64 @@ class AlertDetailScreen extends StatelessWidget {
     final CaregiverAlert a = alert;
     final GlucoseReading? reading = c.repository.readingForAlert(a);
     final bool crit = a.isCritical;
+    final Color sev = severityColor(pal, a);
     final bool showEmergency = crit || a.kind == AlertKind.low;
 
     return SubPage(
       title: s.t('tAlerts'),
       children: <Widget>[
         Container(
-          padding: const EdgeInsets.all(18),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: crit ? pal.critBg : pal.card,
+            color: Color.alphaBlend(sev.withAlpha(crit ? 26 : 16), pal.card),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: crit ? pal.crit : pal.line, width: crit ? 2 : 1),
-            boxShadow: crit ? null : pal.shadows,
+            border: Border.all(color: pal.line),
+            boxShadow: pal.shadows,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  if (crit)
-                    AppChip(
-                      severityLabel(a, s),
-                      fg: Colors.white,
-                      bg: AppPalette.alertRed,
-                      icon: alertIconPath(a),
-                    )
-                  else
-                    ToneChip(severityLabel(a, s), a.tone, icon: alertIconPath(a)),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(whenLabel(a.time, s), style: context.subStyle())),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Semantics(header: true, child: Text(s.t(a.titleKey), style: context.hStyle(22))),
-              const SizedBox(height: 4),
-              Text(
-                alertValueText(a, s),
-                style: context.hStyle(34, FontWeight.w800).copyWith(height: 1.15),
-              ),
-              const SizedBox(height: 6),
-              Text(s.t(a.explKey), style: context.bodyStyle(13.5)),
-            ],
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Container(width: 6, color: sev),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            if (crit)
+                              AppChip(
+                                severityLabel(a, s),
+                                fg: Colors.white,
+                                bg: AppPalette.alertRed,
+                                icon: alertIconPath(a),
+                              )
+                            else
+                              SeverityChip(a),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text(whenLabel(a.time, s), style: context.subStyle())),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Semantics(
+                          header: true,
+                          child: Text(s.t(a.titleKey), style: context.hStyle(22)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          alertValueText(a, s),
+                          style: context.hStyle(34, FontWeight.w800).copyWith(height: 1.15),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(s.t(a.explKey), style: context.bodyStyle(13.5)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         if (reading != null) ...<Widget>[

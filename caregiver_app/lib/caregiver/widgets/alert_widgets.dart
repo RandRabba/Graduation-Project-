@@ -25,6 +25,30 @@ String alertValueText(CaregiverAlert a, AppStrings s) {
 String severityLabel(CaregiverAlert a, AppStrings s) =>
     a.isCritical ? s.t('sevCrit') : s.t('sevWarn');
 
+/// One colour per severity, so the list reads at a glance: critical is red,
+/// a warning is orange (the Patient palette's `elevated`).
+Color severityColor(AppPalette pal, CaregiverAlert a) => a.isCritical ? pal.crit : pal.low;
+
+/// Severity pill: tinted background, coloured text, and a glyph so it does not
+/// rely on colour alone.
+class SeverityChip extends StatelessWidget {
+  const SeverityChip(this.alert, {super.key});
+
+  final CaregiverAlert alert;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final Color fg = severityColor(pal, alert);
+    return AppChip(
+      severityLabel(alert, context.s),
+      fg: fg,
+      bg: fg.withAlpha(30),
+      icon: alert.isCritical ? AppIcons.alert : null,
+    );
+  }
+}
+
 /// Compact alert row used in "Latest alerts" on the home screen.
 class AlertSummaryRow extends StatelessWidget {
   const AlertSummaryRow({super.key, required this.alert, required this.onTap});
@@ -36,8 +60,8 @@ class AlertSummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final s = context.s;
-    final Color fg = pal.fg(alert.tone);
-    final Color bg = pal.bgOf(alert.tone);
+    final Color fg = severityColor(pal, alert);
+    final Color bg = fg.withAlpha(30);
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: AppCard(
@@ -60,7 +84,7 @@ class AlertSummaryRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            ToneChip(severityLabel(alert, s), alert.tone),
+            SeverityChip(alert),
           ],
         ),
       ),
@@ -68,7 +92,8 @@ class AlertSummaryRow extends StatelessWidget {
   }
 }
 
-/// Full alert card used in the Alerts tab. Critical alerts get a red outline.
+/// Full notification card used in the Notifications tab. The severity shows as
+/// a soft tint and a coloured bar on the leading edge, not as a heavy outline.
 class AlertCard extends StatelessWidget {
   const AlertCard({super.key, required this.alert, required this.unread, required this.onTap});
 
@@ -80,40 +105,62 @@ class AlertCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final s = context.s;
-    final bool crit = alert.isCritical;
+    final Color fg = severityColor(pal, alert);
+    final Color tint = Color.alphaBlend(fg.withAlpha(alert.isCritical ? 26 : 16), pal.card);
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: AppCard(
-        padding: const EdgeInsets.all(14),
-        color: crit ? pal.critBg : null,
-        borderColor: crit ? pal.crit : null,
+        padding: EdgeInsets.zero,
+        color: tint,
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                ToneChip(severityLabel(alert, s), alert.tone),
-                const SizedBox(width: 8),
-                Expanded(child: Text(whenLabel(alert.time, s), style: context.subStyle())),
-                if (unread)
-                  Semantics(
-                    label: s.t('newL'),
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(color: pal.sec, shape: BoxShape.circle),
-                    ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Container(width: 5, color: fg),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          SeverityChip(alert),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(whenLabel(alert.time, s), style: context.subStyle()),
+                          ),
+                          if (unread) ...<Widget>[
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(color: pal.pri, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              s.t('newL'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: pal.pri,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(s.t(alert.titleKey), style: context.hStyle(15)),
+                      const SizedBox(height: 2),
+                      Text(alertValueText(alert, s), style: context.hStyle(22, FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text(s.t(alert.explKey), style: context.subStyle()),
+                    ],
                   ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(s.t(alert.titleKey), style: context.hStyle(15)),
-            const SizedBox(height: 2),
-            Text(alertValueText(alert, s), style: context.hStyle(22, FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(s.t(alert.explKey), style: context.subStyle()),
-          ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

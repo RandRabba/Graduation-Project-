@@ -1,0 +1,171 @@
+rules_version = '2';
+
+// DMS - Firestore security rules (one Firebase project for the patient app,
+// the caregiver app and the doctor website).
+//
+// There is no server in between, so these rules ARE the permission system.
+// Whatever the apps look like, a caregiver can only ever read what is allowed
+// here. See README.md in this folder for the data model.
+//
+// Deny by default: anything not matched below is refused.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function hasEmail() {
+      return signedIn() && 'email' in request.auth.token;
+    }
+
+    // The signed-in user's email in lower case. It is the document id in
+    // /links, so the patient and the caregiver must agree on one spelling.
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function linkPath(email) {
+      return /databases/$(database)/documents/links/$(email);
+    }
+
+    // True when the signed-in caregiver was added by [patientUid] and the
+    // patient has not removed them since (deleting the link ends access).
+    function isLinkedCaregiver(patientUid) {
+      return hasEmail()
+        && exists(linkPath(myEmail()))
+        && get(linkPath(myEmail())).data.patientUid == patientUid;
+    }
+
+    // Glucose history is visible only if the patient switched sharing on.
+    function sharesGlucose(patientUid) {
+      return isLinkedCaregiver(patientUid)
+        && get(linkPath(myEmail())).data.shareGlucose == true;
+    }
+
+    // ------------------------------------------------------------------
+    // /users/{uid}  - profile of every account (patient, caregiver, doctor)
+    // ------------------------------------------------------------------
+    match /users/{uid} {
+      // Own profile, or the profile of the patient who added this caregiver.
+      allow read: if isOwner(uid) || isLinkedCaregiver(uid);
+
+      // Anyone can create their own profile as patient or caregiver.
+      // A caregiver profile needs an invitation for the same email.
+      // Doctor accounts are never created from an app: add them in the
+      // Firebase console (or with the Admin SDK).
+      allow create: if isOwner(uid)
+        && hasEmail()
+        && request.resource.data.email == myEmail()
+        && request.resource.data.role in ['patient', 'caregiver']
+        && (request.resource.data.role == 'patient'
+            || exists(linkPath(myEmail())));
+
+      // The role and the email can never change.
+      allow update: if isOwner(uid)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.email == resource.data.email;
+    }
+
+    // ------------------------------------------------------------------
+    // /links/{caregiverEmail}  - "the patient added this caregiver"
+    //
+    // The id is the caregiver's lower-case email, so the caregiver can find
+    // the invitation after registering and these rules can look it up.
+    // One email follows one patient (v1).
+    // ------------------------------------------------------------------
+    match /links/{email} {
+      // Caregiver branch first: a caregiver without an invitation gets a
+      // plain "not found" instead of a permission error.
+      allow read: if (hasEmail() && email == myEmail())
+        || (signedIn() && resource.data.patientUid == request.auth.uid);
+
+      // The patient adds a caregiver by email only.
+      allow create: if signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'patient'
+        && email == email.lower()
+        && request.resource.data.keys().hasAll(['patientUid', 'caregiverEmail', 'status', 'shareGlucose'])
+        && request.resource.data.keys().hasOnly(['patientUid', 'caregiverEmail', 'status', 'shareGlucose', 'createdAt'])
+        && request.resource.data.patientUid == request.auth.uid
+        && request.resource.data.caregiverEmail == email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.shareGlucose is bool;
+
+      // The patient decides what the caregiver may read.
+      allow update: if signedIn()
+        && resource.data.patientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shareGlucose'])
+        && request.resource.data.shareGlucose is bool;
+
+      // The caregiver claims the invitation when they register or sign in.
+      // No accept step: this only records which account owns the email.
+      allow update: if hasEmail()
+        && email == myEmail()
+        && resource.data.status == 'pending'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'caregiver'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'caregiverUid', 'claimedAt'])
+        && request.resource.data.status == 'active'
+        && request.resource.data.caregiverUid == request.auth.uid;
+
+      // Either side ends the link: the patient removes the caregiver, or the
+      // caregiver disconnects. Access ends immediately.
+      allow delete: if signedIn()
+        && (resource.data.patientUid == request.auth.uid
+            || (hasEmail() && email == myEmail()));
+    }
+
+    // ------------------------------------------------------------------
+    // /patients/{patientUid}/...  - the patient's own health data
+    // Only the patient writes. A linked caregiver can read.
+    // ------------------------------------------------------------------
+    match /patients/{pid}/readings/{id} {
+      allow read: if isOwner(pid) || sharesGlucose(pid);
+      allow create, update, delete: if isOwner(pid);
+    }
+
+    match /patients/{pid}/reminders/{id} {
+      // Caregiver: read-only view of what the patient has to do and did.
+      allow read: if isOwner(pid) || isLinkedCaregiver(pid);
+      allow create, update, delete: if isOwner(pid);
+    }
+
+    // The patient's own notification history. Caregivers never read it:
+    // they get their own copies in /caregiverNotifications.
+    match /patients/{pid}/alerts/{id} {
+      allow read, write: if isOwner(pid);
+    }
+
+    // ------------------------------------------------------------------
+    // /caregiverNotifications/{id}
+    // One document per caregiver, written by the patient app when something
+    // needs the caregiver (critical reading, SOS). The caregiver can only
+    // mark it as read.
+    // ------------------------------------------------------------------
+    match /caregiverNotifications/{id} {
+      allow read: if (hasEmail() && resource.data.caregiverEmail == myEmail())
+        || (signedIn() && resource.data.patientUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.patientUid == request.auth.uid
+        && request.resource.data.caregiverEmail is string
+        && request.resource.data.caregiverEmail.matches('^[^/]+$')
+        && exists(linkPath(request.resource.data.caregiverEmail))
+        && get(linkPath(request.resource.data.caregiverEmail)).data.patientUid == request.auth.uid
+        && request.resource.data.kind is string
+        && request.resource.data.read == false;
+
+      allow update: if hasEmail()
+        && resource.data.caregiverEmail == myEmail()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read is bool;
+    }
+  }
+}

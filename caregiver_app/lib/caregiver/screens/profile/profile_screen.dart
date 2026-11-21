@@ -311,7 +311,10 @@ class _SettingsCard extends StatelessWidget {
         AppIcons.logout,
         s.t('logout'),
         iconColor: pal.crit,
-        onTap: () => goToLogin(context),
+        onTap: () async {
+          await context.cgRead.signOut();
+          if (context.mounted) goToLogin(context);
+        },
       ),
     ]);
   }

@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'screens/auth/login_screen.dart';
+import 'services/caregiver_auth.dart';
 import 'services/caregiver_repository.dart';
 import 'shell/caregiver_shell.dart';
 import 'state/caregiver_controller.dart';
 import 'state/caregiver_scope.dart';
 import 'theme/app_theme.dart';
+import 'widgets/phone_frame.dart';
 
 /// The whole Caregiver experience as one self-contained widget.
 ///
@@ -30,8 +32,9 @@ class CaregiverModule extends StatefulWidget {
     super.key,
     this.controller,
     this.repository,
+    this.auth,
     this.startAtDashboard = false,
-    this.showDemoControls = true,
+    this.showDemoControls = false,
     this.onExit,
     this.onCall,
   });
@@ -44,13 +47,19 @@ class CaregiverModule extends StatefulWidget {
   /// [controller] is supplied (the controller already holds its repository).
   final CaregiverRepository? repository;
 
+  /// Sign in and registration. Defaults to the demo implementation. Pass the
+  /// session that backs [repository] (for Firebase: the same
+  /// `FirebaseCaregiverSession`). Ignored when a [controller] is supplied.
+  final CaregiverAuth? auth;
+
   /// Skip login and registration and open the dashboard.
   /// Use this when the host app already signed the caregiver in.
   final bool startAtDashboard;
 
-  /// Shows the prototype controls (access level, theme, language, data
-  /// states). Turn off in the integrated app. Ignored when a [controller] is
-  /// supplied; set it on the controller instead.
+  /// Shows the prototype controls (theme, language, data states) and fills in
+  /// the demo sign-in details. Off by default, so the app looks final; the
+  /// standalone entry point turns it on with `--dart-define=DEMO=true`.
+  /// Ignored when a [controller] is supplied; set it on the controller instead.
   final bool showDemoControls;
 
   /// Called when the caregiver backs out of the module from its first screen.
@@ -83,6 +92,7 @@ class _CaregiverModuleState extends State<CaregiverModule> {
     } else {
       _controller = CaregiverController(
         repository: widget.repository,
+        auth: widget.auth,
         showDemoControls: widget.showDemoControls,
       );
       _ownsController = true;
@@ -99,7 +109,8 @@ class _CaregiverModuleState extends State<CaregiverModule> {
   void didUpdateWidget(CaregiverModule oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller ||
-        (widget.controller == null && oldWidget.repository != widget.repository)) {
+        (widget.controller == null &&
+            (oldWidget.repository != widget.repository || oldWidget.auth != widget.auth))) {
       if (_ownsController) _controller.dispose();
       _attachController();
     } else {
@@ -156,7 +167,7 @@ class _CaregiverModuleState extends State<CaregiverModule> {
                 final bool dark = Theme.of(context).brightness == Brightness.dark;
                 return AnnotatedRegion<SystemUiOverlayStyle>(
                   value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-                  child: child ?? const SizedBox.shrink(),
+                  child: PhoneFrame(child: child ?? const SizedBox.shrink()),
                 );
               },
               home: widget.startAtDashboard ? const CaregiverShell() : const LoginScreen(),

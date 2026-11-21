@@ -39,23 +39,9 @@ class LatestReadingHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  s.t('latest'),
-                  style: const TextStyle(color: soft, fontSize: 15, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const SizedBox(width: CgGap.sm),
-              Flexible(
-                child: Semantics(
-                  label: '${s.t('ptStatus')}: ${s.t(statusKey)}',
-                  excludeSemantics: true,
-                  child: StatusPill(s.t(statusKey), pal.fg(statusTone), onDark: true),
-                ),
-              ),
-            ],
+          Text(
+            s.t('latest'),
+            style: const TextStyle(color: soft, fontSize: 15, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: CgGap.md),
           Text.rich(
@@ -142,7 +128,37 @@ class LatestReadingHero extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: CgGap.lg + 2),
+          // The patient's overall status is its own line, so it is not mixed up
+          // with the classification of this one reading. It comes from the
+          // readings, so there is no status to show before the first one.
+          if (r != null) ...<Widget>[
+            const SizedBox(height: CgGap.lg),
+            Container(
+              padding: const EdgeInsets.only(top: CgGap.md),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.white.withAlpha(46))),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      s.t('ptStatus'),
+                      style: const TextStyle(color: soft, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  const SizedBox(width: CgGap.sm),
+                  Flexible(
+                    child: Semantics(
+                      label: '${s.t('ptStatus')}: ${s.t(statusKey)}',
+                      excludeSemantics: true,
+                      child: StatusPill(s.t(statusKey), pal.fg(statusTone), onDark: true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: CgGap.lg),
           FilledButton(
             onPressed: onViewReadings,
             style: FilledButton.styleFrom(

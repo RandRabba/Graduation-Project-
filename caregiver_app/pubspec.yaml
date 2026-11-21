@@ -14,6 +14,13 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_svg: ^2.0.10+1
+  # Opens the phone dialer for the emergency contact (tel: link).
+  url_launcher: ^6.3.1
+  # Firebase (Flutter BoM 5.2.0, Nov 2026). If `flutter pub get` cannot solve
+  # these, run: flutter pub add firebase_core firebase_auth cloud_firestore
+  firebase_core: ^5.2.0
+  firebase_auth: ^7.1.0
+  cloud_firestore: ^7.2.0
 
 dev_dependencies:
   flutter_test:
