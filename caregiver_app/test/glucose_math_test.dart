@@ -169,4 +169,41 @@ void main() {
       expect(statusFromLatest(_r('e', 50, now)), PatientStatus.critical);
     });
   });
+
+  group('alertFromNotification', () {
+    test('maps the kinds the patient app sends', () {
+      final CaregiverAlert high = alertFromNotification(
+        id: 'n1',
+        kind: 'critical_high',
+        time: now,
+        glucose: 260.4,
+        readingId: 'manual-1',
+      )!;
+      expect(high.kind, AlertKind.critHigh);
+      expect(high.isCritical, isTrue);
+      expect(high.value, 260);
+      expect(high.relatedReadingId, 'manual-1');
+      expect(high.time, now);
+
+      expect(
+        alertFromNotification(id: 'n2', kind: 'critical_low', time: now, glucose: 48)!.kind,
+        AlertKind.critLow,
+      );
+      final CaregiverAlert sos = alertFromNotification(id: 'n3', kind: 'sos', time: now)!;
+      expect(sos.kind, AlertKind.sos);
+      expect(sos.value, isNull);
+      expect(sos.isCritical, isTrue);
+    });
+
+    test('a value that is not shared stays empty', () {
+      final CaregiverAlert a = alertFromNotification(id: 'n', kind: 'critical_high', time: now)!;
+      expect(a.value, isNull);
+      expect(a.relatedReadingId, '');
+    });
+
+    test('ignores kinds it does not know', () {
+      expect(alertFromNotification(id: 'n', kind: 'low', time: now), isNull);
+      expect(alertFromNotification(id: 'n', kind: '', time: now), isNull);
+    });
+  });
 }

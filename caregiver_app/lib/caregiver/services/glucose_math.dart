@@ -34,6 +34,37 @@ PatientStatus statusFromLatest(GlucoseReading? latest) {
   }
 }
 
+/// A notification the patient app wrote for the caregiver as an alert, or null
+/// for a kind this app does not show. [glucose] is missing when the patient
+/// does not share glucose.
+CaregiverAlert? alertFromNotification({
+  required String id,
+  required String kind,
+  required DateTime time,
+  num? glucose,
+  String readingId = '',
+}) {
+  final AlertKind k;
+  switch (kind) {
+    case 'critical_high':
+      k = AlertKind.critHigh;
+    case 'critical_low':
+      k = AlertKind.critLow;
+    case 'sos':
+      k = AlertKind.sos;
+    default:
+      return null;
+  }
+  return CaregiverAlert(
+    id: id,
+    kind: k,
+    severity: AlertSeverity.critical,
+    time: time,
+    relatedReadingId: readingId,
+    value: glucose?.round(),
+  );
+}
+
 /// The patient app saves when a manual reading was taken as a code. Without
 /// one (or for sensor readings) it counts as a random reading.
 ReadingType readingTypeFor(String? timing) {

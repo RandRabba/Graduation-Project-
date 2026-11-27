@@ -114,7 +114,7 @@ class HbA1cRecord {
   final ReadingSource source;
 }
 
-enum AlertKind { critHigh, critLow, low, high, repeated }
+enum AlertKind { critHigh, critLow, low, high, repeated, sos }
 
 enum AlertSeverity { critical, warning }
 
@@ -145,6 +145,7 @@ class CaregiverAlert {
     switch (kind) {
       case AlertKind.critHigh:
       case AlertKind.critLow:
+      case AlertKind.sos:
         return Tone.crit;
       case AlertKind.low:
         return Tone.low;

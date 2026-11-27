@@ -9,17 +9,22 @@ import '../utils/formatters.dart';
 import 'app_card.dart';
 import 'app_icon.dart';
 
-/// Arrow icon for an alert: down for low, repeat for repeated, up for high.
+/// Arrow icon for an alert: down for low, repeat for repeated, up for high,
+/// a warning sign for an SOS.
 String alertIconPath(CaregiverAlert a) {
+  if (a.kind == AlertKind.sos) return AppIcons.alert;
   if (a.isLowSide) return AppIcons.down;
   if (a.kind == AlertKind.repeated) return AppIcons.repeat;
   return AppIcons.up;
 }
 
-/// "342 mg/dL", or "3 readings" for repeated abnormal readings.
+/// "342 mg/dL", "3 readings" for repeated abnormal readings, "SOS" for an SOS,
+/// or "-- mg/dL" when the patient does not share the value.
 String alertValueText(CaregiverAlert a, AppStrings s) {
+  if (a.kind == AlertKind.sos) return s.t('sosValue');
+  if (a.kind == AlertKind.repeated) return s.t('rep3');
   final int? v = a.value;
-  return (v != null && v > 0) ? '$v ${s.t('unit')}' : s.t('rep3');
+  return (v != null && v > 0) ? '$v ${s.t('unit')}' : '-- ${s.t('unit')}';
 }
 
 String severityLabel(CaregiverAlert a, AppStrings s) =>

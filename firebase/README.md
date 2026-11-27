@@ -39,8 +39,8 @@ Field names are camelCase. Times are Firestore timestamps.
 | `links/{caregiverEmail}` | the patient | `patientUid`, `caregiverEmail`, `status` (`pending` until the caregiver registers, then `active`), `shareGlucose`, `createdAt`, `caregiverUid`, `claimedAt` |
 | `patients/{uid}/readings/{id}` | the patient | `value` (mg/dL), `at` (timestamp of the measurement), `source` (`manual`, `dexcom`, ...), `sensor`, `note`, `timing` (`fasting`, `before_meal`, `after_meal`, `random`), `createdAt`. The id is `<source>-<unix seconds>`, so the same reading cannot be stored twice |
 | `patients/{uid}/reminders/{id}` | the patient | as the patient app's `Reminder` (`assignedBy` marks doctor reminders) |
-| `patients/{uid}/alerts/{id}` | the patient | the patient's own notification history |
-| `caregiverNotifications/{id}` | the patient app, one per caregiver | `patientUid`, `caregiverEmail`, `kind`, `glucose`, `message`, `createdAt`, `read` (the caregiver can only change `read`) |
+| `patients/{uid}/alerts/{id}` | the patient | the patient's own alert history: `type` (`critical_low`, `low`, `high`, `critical_high`), `message`, `at`, `read`, `glucose`, `readingAt`, `caregiverNotified`, `createdAt`. The id is the id of the reading that raised it |
+| `caregiverNotifications/{id}` | the patient app, one per caregiver | `patientUid`, `caregiverEmail`, `kind` (`critical_low`, `critical_high`, `sos`), `readingId`, `readingAt`, `glucose` (only when the patient shares glucose), `message`, `createdAt`, `read` (the caregiver can only change `read`). A glucose notification has the id `<patientUid>_<readingId>` |
 
 The id of a `links` document is the caregiver's **lower-case email**.
 
@@ -71,7 +71,11 @@ app, or run `flutterfire configure` in the patient app.
 Glucose readings (manual entries) are written to `patients/{uid}/readings`.
 The caregiver app listens to the newest 500 of them while `shareGlucose` is
 true and builds the latest reading, the history, the chart and the summary
-from them. Alerts, reminders and reports are not connected yet.
+from them. A reading out of range also writes an alert for the patient. A
+critical one (below 54 or above 250 mg/dL, taken in the last 3 hours) also
+writes a notification for the caregiver who has registered, and the caregiver
+app shows it as an alert; an SOS is shown the same way. Reminders and reports
+are not connected yet.
 
 A caregiver email and a patient email must be different accounts: one email is
 one Firebase account.

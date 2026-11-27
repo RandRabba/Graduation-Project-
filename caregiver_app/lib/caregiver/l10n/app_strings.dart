@@ -10,6 +10,14 @@ class AppStrings {
 
   String t(String key) => (arabic ? _ar : _en)[key] ?? key;
 
+  /// Greeting for the home header, chosen by the hour of [now] (local time).
+  String greeting([DateTime? now]) {
+    final int hour = (now ?? DateTime.now()).hour;
+    if (hour >= 5 && hour < 12) return t('greet');
+    if (hour >= 12 && hour < 18) return t('greetAfternoon');
+    return t('greetEvening');
+  }
+
   String agoMin(int n) => arabic ? 'قبل $n دقيقة' : '$n min ago';
 
   String agoHour(int n) => arabic ? 'قبل $n ساعة' : '$n h ago';
@@ -17,6 +25,8 @@ class AppStrings {
   static const Map<String, String> _en = {
     // Shell and home
     'greet': 'Good morning',
+    'greetAfternoon': 'Good afternoon',
+    'greetEvening': 'Good evening',
     'tHome': 'Home',
     'tRead': 'Readings',
     'tAlerts': 'Notifications',
@@ -71,6 +81,10 @@ class AppStrings {
     'a_low': 'Low glucose',
     'a_high': 'High glucose',
     'a_rep': 'Repeated abnormal readings',
+    'a_sos': 'SOS from the patient',
+    'e_sos': 'The patient asked for help.',
+    'dd_sos': 'The patient pressed the SOS button in their app and asked for help. Check in with them right away.',
+    'sosValue': 'SOS',
     'e_critHigh': "Reading is far above the patient's target range.",
     'e_critLow': "Reading is far below the patient's target range.",
     'e_low': "Reading is below the patient's target range.",
@@ -119,10 +133,10 @@ class AppStrings {
     'dRelated': 'Related reading',
     'dWhat': 'What happened',
     'dGuide': 'Safety guidance',
-    'dd_critHigh': 'A sensor reading of 342 mg/dL was recorded after a meal. This is far above the target range set for the patient.',
-    'dd_critLow': 'A sensor reading of 48 mg/dL was recorded. This is far below the target range set for the patient.',
-    'dd_low': 'A sensor reading of 62 mg/dL was recorded. This is below the target range set for the patient.',
-    'dd_high': 'A manual reading of 214 mg/dL was recorded. This is above the target range set for the patient.',
+    'dd_critHigh': 'A reading far above the target range set for the patient was recorded.',
+    'dd_critLow': 'A reading far below the target range set for the patient was recorded.',
+    'dd_low': 'A reading below the target range set for the patient was recorded.',
+    'dd_high': 'A reading above the target range set for the patient was recorded.',
     'dd_rep': 'Three readings above the target range were recorded within 24 hours.',
     'g_crit': 'Check in with the patient right away. If they seem unwell, confused or unresponsive, call local emergency services. Follow the care plan the patient agreed with their doctor.',
     'g_warn': 'Check in with the patient when you can. If you are worried about how they feel, contact their doctor. Follow the care plan the patient agreed with their doctor.',
@@ -274,6 +288,8 @@ class AppStrings {
   static const Map<String, String> _ar = {
     // Shell and home
     'greet': 'صباح الخير',
+    'greetAfternoon': 'مساء الخير',
+    'greetEvening': 'مساء الخير',
     'tHome': 'الرئيسية',
     'tRead': 'القراءات',
     'tAlerts': 'الإشعارات',
@@ -328,6 +344,10 @@ class AppStrings {
     'a_low': 'سكر منخفض',
     'a_high': 'سكر مرتفع',
     'a_rep': 'قراءات غير طبيعية متكررة',
+    'a_sos': 'نداء استغاثة من المريض',
+    'e_sos': 'المريض طلب المساعدة.',
+    'dd_sos': 'ضغط المريض زر الاستغاثة في تطبيقه وطلب المساعدة. تواصل معه فورًا.',
+    'sosValue': 'استغاثة',
     'e_critHigh': 'القراءة أعلى بكثير من النطاق المستهدف للمريض.',
     'e_critLow': 'القراءة أقل بكثير من النطاق المستهدف للمريض.',
     'e_low': 'القراءة أقل من النطاق المستهدف للمريض.',
@@ -376,10 +396,10 @@ class AppStrings {
     'dRelated': 'القراءة المرتبطة',
     'dWhat': 'ما الذي حدث',
     'dGuide': 'إرشادات السلامة',
-    'dd_critHigh': 'سُجّلت قراءة حساس بقيمة 342 mg/dL بعد وجبة، وهي أعلى بكثير من النطاق المستهدف للمريض.',
-    'dd_critLow': 'سُجّلت قراءة حساس بقيمة 48 mg/dL، وهي أقل بكثير من النطاق المستهدف للمريض.',
-    'dd_low': 'سُجّلت قراءة حساس بقيمة 62 mg/dL، وهي أقل من النطاق المستهدف للمريض.',
-    'dd_high': 'سُجّلت قراءة يدوية بقيمة 214 mg/dL، وهي أعلى من النطاق المستهدف للمريض.',
+    'dd_critHigh': 'سُجّلت قراءة أعلى بكثير من النطاق المستهدف للمريض.',
+    'dd_critLow': 'سُجّلت قراءة أقل بكثير من النطاق المستهدف للمريض.',
+    'dd_low': 'سُجّلت قراءة أقل من النطاق المستهدف للمريض.',
+    'dd_high': 'سُجّلت قراءة أعلى من النطاق المستهدف للمريض.',
     'dd_rep': 'سُجّلت ثلاث قراءات أعلى من النطاق المستهدف خلال 24 ساعة.',
     'g_crit': 'تواصل مع المريض فورًا. إذا بدا متعبًا أو مشوشًا أو لا يستجيب، فاتصل بخدمات الطوارئ المحلية. اتبع خطة الرعاية التي اتفق عليها المريض مع طبيبه.',
     'g_warn': 'تواصل مع المريض عندما تستطيع. إذا كنت قلقًا على حالته، فتواصل مع طبيبه. اتبع خطة الرعاية التي اتفق عليها المريض مع طبيبه.',

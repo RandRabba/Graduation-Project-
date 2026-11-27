@@ -42,9 +42,15 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
   /// share glucose (the Firestore rules refuse the read in that case).
   List<GlucoseReading> readings = const <GlucoseReading>[];
 
+  /// The critical notifications the patient app sent to this caregiver, newest
+  /// first (critical glucose readings and SOS).
+  List<CaregiverAlert> alerts = const <CaregiverAlert>[];
+
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _linkSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _readingsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _alertsSub;
   String? _watchedReadingsPid;
+  String? _watchedAlertsEmail;
   String? _loadedPatientUid;
   bool _disposed = false;
 
@@ -267,6 +273,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
         shareGlucose = false;
         _loadedPatientUid = null;
         _watchReadings();
+        _watchAlerts(linked: false);
         _setPhase(LinkPhase.noPatient);
         return;
       }
@@ -294,6 +301,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
       patientUid = pid;
       shareGlucose = link['shareGlucose'] == true;
       _watchReadings();
+      _watchAlerts(linked: true);
       _setPhase(LinkPhase.linked);
     } on FirebaseException {
       _setPhase(LinkPhase.error);
@@ -327,10 +335,62 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
         readings = list;
         _notify();
       },
-      onError: (Object _) {
+      onError: (Object e) {
+        debugPrint('Readings listener: $e');
         readings = const <GlucoseReading>[];
         _notify();
       },
+    );
+  }
+
+  /// Listens to the notifications addressed to this caregiver's email while
+  /// they are linked to a patient. Keeps the newest 100.
+  void _watchAlerts({required bool linked}) {
+    final String? email = linked ? profile?.email.toLowerCase() : null;
+    if (email == _watchedAlertsEmail) return;
+    _alertsSub?.cancel();
+    _alertsSub = null;
+    _watchedAlertsEmail = email;
+    alerts = const <CaregiverAlert>[];
+    if (email == null) return;
+    _alertsSub = _db
+        .collection('caregiverNotifications')
+        .where('caregiverEmail', isEqualTo: email)
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .listen(
+      (QuerySnapshot<Map<String, dynamic>> snap) {
+        final List<CaregiverAlert> list = <CaregiverAlert>[];
+        for (final QueryDocumentSnapshot<Map<String, dynamic>> d in snap.docs) {
+          final CaregiverAlert? a = _alertFrom(d.id, d.data());
+          if (a != null) list.add(a);
+        }
+        alerts = list;
+        _notify();
+      },
+      onError: (Object e) {
+        // most likely the composite index of caregiverNotifications is missing
+        debugPrint('Notifications listener: $e');
+        alerts = const <CaregiverAlert>[];
+        _notify();
+      },
+    );
+  }
+
+  /// A notification written by the patient app; null for a kind this app does
+  /// not show.
+  static CaregiverAlert? _alertFrom(String id, Map<String, dynamic> d) {
+    final Object? kind = d['kind'];
+    final Object? when = d['readingAt'] ?? d['createdAt'];
+    final Object? glucose = d['glucose'];
+    final Object? readingId = d['readingId'];
+    return alertFromNotification(
+      id: id,
+      kind: kind is String ? kind : '',
+      time: when is Timestamp ? when.toDate() : DateTime.now(),
+      glucose: glucose is num ? glucose : null,
+      readingId: readingId is String ? readingId : '',
     );
   }
 
@@ -359,6 +419,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
     shareGlucose = false;
     _loadedPatientUid = null;
     _watchReadings();
+    _watchAlerts(linked: false);
     await _auth.signOut();
     _setPhase(LinkPhase.signedOut);
   }
@@ -377,6 +438,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
     _disposed = true;
     _linkSub?.cancel();
     _readingsSub?.cancel();
+    _alertsSub?.cancel();
     super.dispose();
   }
 

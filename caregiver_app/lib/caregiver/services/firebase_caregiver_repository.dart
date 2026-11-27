@@ -13,10 +13,12 @@ import 'glucose_math.dart';
 /// patient's glucose readings with the chart and summary built from them
 /// (only while the patient shares glucose).
 ///
-/// Not connected yet: alerts, reminders, reports, HbA1c and doctor
-/// instructions. They stay empty here, so the screens show their empty states
-/// instead of invented numbers (see `firebase/README.md` for the planned
-/// collections).
+/// The alerts are the critical notifications (critical glucose and SOS) the
+/// patient app writes for this caregiver.
+///
+/// Not connected yet: reminders, reports, HbA1c and doctor instructions. They
+/// stay empty here, so the screens show their empty states instead of invented
+/// numbers (see `firebase/README.md` for the planned collections).
 class FirebaseCaregiverRepository implements CaregiverRepository {
   FirebaseCaregiverRepository(this._session) {
     // Real readings carry real dates: "today", "5 min ago" and month names must
@@ -130,13 +132,15 @@ class FirebaseCaregiverRepository implements CaregiverRepository {
     return null;
   }
 
+  // ---- Alerts ---------------------------------------------------------------------
+
+  @override
+  List<CaregiverAlert> alerts(AccessLevel level) => _session.alerts;
+
   // ---- Not connected yet -----------------------------------------------------
 
   @override
   HbA1cRecord? hba1c(AccessLevel level) => null;
-
-  @override
-  List<CaregiverAlert> alerts(AccessLevel level) => const <CaregiverAlert>[];
 
   @override
   List<HealthReport> reports(AccessLevel level, ReportPeriod period) => const <HealthReport>[];

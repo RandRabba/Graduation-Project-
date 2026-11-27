@@ -42,7 +42,7 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(CgGap.page, CgGap.md, CgGap.page, CgGap.xl),
       children: <Widget>[
         PageHeader(
-          s.t('greet'),
+          s.greeting(),
           subtitle: '${s.t('monitoring')} ${patient.name.of(ar)}',
           leading: Semantics(
             button: true,
