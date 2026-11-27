@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'api.dart' show ApiException;
+import 'app_error.dart';
 import 'l10n.dart';
 import 'theme.dart';
 
@@ -713,13 +713,9 @@ void showSnack(BuildContext context, String message) =>
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
 
-/// What to tell the user about a failed backend call.
+/// What to tell the user about a failed action.
 String errorText(BuildContext context, Object error) {
-  if (error is ApiException) {
-    if (error.isNetwork) return context.tr('error_network');
-    if (error.status >= 500) return context.tr('error_server');
-    return error.message; // validation / conflict detail from the server
-  }
+  if (error is AppException) return context.tr(error.key);
   return context.tr('error_generic');
 }
 

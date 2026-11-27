@@ -33,6 +33,21 @@ class AppUser {
     doctorId: j['doctor_id'],
   );
 
+  /// A profile stored in Firestore (`users/{uid}`). Empty text means "not set".
+  factory AppUser.fromDoc(String uid, Map<String, dynamic> d) {
+    String? text(Object? v) => v is String && v.trim().isNotEmpty ? v.trim() : null;
+    return AppUser(
+      id: uid,
+      role: text(d['role']) ?? 'patient',
+      email: text(d['email']) ?? '',
+      fullName: text(d['fullName']) ?? '',
+      dateOfBirth: DateTime.tryParse(text(d['dateOfBirth']) ?? ''),
+      diabetesType: text(d['diabetesType']),
+      phone: text(d['phone']),
+      doctorId: text(d['doctorId']),
+    );
+  }
+
   final String id, role, email, fullName;
   final DateTime? dateOfBirth;
   final String? diabetesType, phone, doctorId;

@@ -4,7 +4,7 @@ import 'common.dart';
 import 'l10n.dart';
 import 'theme.dart';
 
-/// Confirms, then sends an SOS to the active caregiver and records it in the alert history.
+/// Confirms, then sends an SOS notification to the caregiver.
 Future<void> sendEmergency(BuildContext context) async {
   final p = context.palette;
   final note = TextEditingController();
@@ -46,23 +46,19 @@ Future<void> sendEmergency(BuildContext context) async {
   note.dispose();
   if (ok != true || !context.mounted) return;
   try {
-    final res = await context.api.post('/emergency', {
-      'message': text.isEmpty ? null : text,
-    });
-    if (!context.mounted) return;
-    showSnack(
-      context,
-      context.tr(
-        res['caregiver_notified'] == true ? 'sos_sent' : 'sos_no_caregiver',
-      ),
+    final notified = await AppScope.read<CaregiverAssignment>(context).sendSos(
+      patientName: context.auth.user?.fullName ?? '',
+      message: text.isEmpty ? null : text,
     );
+    if (!context.mounted) return;
+    showSnack(context, context.tr(notified ? 'sos_sent' : 'sos_no_caregiver'));
   } catch (e) {
     if (context.mounted) showSnack(context, errorText(context, e));
   }
 }
 
-/// Shows the assigned caregiver, or an "Add caregiver" button that assigns one by email.
-/// UI only for now: the assignment is kept in memory until the backend is connected.
+/// Shows the caregiver the patient added, or an "Add caregiver" button that adds one by email.
+/// Adding writes the invitation `links/{email}`; the caregiver then registers in the Caregiver app.
 class CaregiverScreen extends StatelessWidget {
   const CaregiverScreen({super.key});
 
@@ -73,8 +69,12 @@ class CaregiverScreen extends StatelessWidget {
       builder: (_) => const _AddCaregiverSheet(),
     );
     if (email == null || !context.mounted) return;
-    AppScope.read<CaregiverAssignment>(context).assign(email);
-    showSnack(context, context.tr('caregiver_assigned'));
+    try {
+      await AppScope.read<CaregiverAssignment>(context).assign(email);
+      if (context.mounted) showSnack(context, context.tr('caregiver_assigned'));
+    } catch (e) {
+      if (context.mounted) showSnack(context, errorText(context, e));
+    }
   }
 
   Future<void> _remove(BuildContext context) async {
@@ -100,8 +100,11 @@ class CaregiverScreen extends StatelessWidget {
         ],
       ),
     );
-    if (ok == true && context.mounted) {
-      AppScope.read<CaregiverAssignment>(context).remove();
+    if (ok != true || !context.mounted) return;
+    try {
+      await AppScope.read<CaregiverAssignment>(context).remove();
+    } catch (e) {
+      if (context.mounted) showSnack(context, errorText(context, e));
     }
   }
 
@@ -109,6 +112,7 @@ class CaregiverScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final email = context.caregiver.email;
+    final active = context.caregiver.active;
     return SubPage(
       title: context.tr('caregiver_title'),
       children: [
@@ -159,9 +163,18 @@ class CaregiverScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: Gap.md),
                 StatusPill(
-                  context.tr('status_assigned'),
-                  p.normal,
-                  icon: Icons.verified_rounded,
+                  context.tr(active ? 'status_active' : 'status_pending'),
+                  active ? p.normal : p.caution,
+                  icon: active
+                      ? Icons.verified_rounded
+                      : Icons.hourglass_top_rounded,
+                ),
+                const SizedBox(height: Gap.sm),
+                Text(
+                  context.tr(
+                    active ? 'caregiver_active_body' : 'caregiver_pending_body',
+                  ),
+                  style: context.text.bodyMedium,
                 ),
                 const SizedBox(height: Gap.xs),
                 TextButton.icon(

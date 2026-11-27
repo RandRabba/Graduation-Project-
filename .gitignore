@@ -1,0 +1,39 @@
+# DMS repository-wide ignore rules.
+# Each app folder keeps its own .gitignore as well; these rules add secret protection
+# for the whole repository, including the future backend/ folder.
+#
+# Firebase CLIENT configuration is intentionally NOT ignored (it holds public app
+# identifiers, not secrets): google-services.json, GoogleService-Info.plist,
+# firebase_options.dart and firebase.json stay committable.
+
+# Environment files (secrets). Only the example file with variable names is committed.
+.env
+.env.*
+!.env.example
+
+# Service-account JSON files and Firebase Admin SDK credentials.
+# Keep these outside the repository; never commit them.
+*service-account*.json
+*service_account*.json
+*serviceAccount*.json
+*serviceaccount*.json
+*firebase-adminsdk*.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python (backend)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Firebase CLI cache
+.firebase/
+
+# Firebase secrets and environment variables
+secrets/
+.env

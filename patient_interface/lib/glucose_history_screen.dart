@@ -102,11 +102,11 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
               'alert': context.tr('alert_${alerts.first.type}'),
             }),
     );
-    final api = context.api;
+    final glucose = context.repos.glucose;
     await _load();
     if (!mounted) return;
     // keep the dashboard chart and alert badge in step
-    AppScope.read<SensorSession>(context).loadToday(api).catchError((_) {});
+    AppScope.read<SensorSession>(context).loadToday(glucose).catchError((_) {});
     AppScope.read<AlertInbox>(context).refresh();
   }
 

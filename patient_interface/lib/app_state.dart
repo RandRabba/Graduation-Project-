@@ -1,6 +1,7 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'api.dart';
+import 'app_error.dart';
 import 'auth.dart';
 import 'meal_analysis.dart';
 import 'models.dart';
@@ -39,21 +40,16 @@ class SensorSession extends ChangeNotifier {
   final List<Offset> _readings = [];
 
   /// Replaces [readings] with today's readings stored for the signed-in patient.
-  Future<void> loadToday(Api api) async {
+  Future<void> loadToday(GlucoseRepository repo) async {
     final n = DateTime.now();
     final start = DateTime(n.year, n.month, n.day);
     final today = <GlucoseReading>[];
-    String? before;
+    DateTime? before;
     do {
-      final page = await api.get('/glucose/readings', {
-        'limit': 200,
-        'before': before,
-      });
-      final items = [
-        for (final j in page['items'] as List) GlucoseReading.fromJson(j),
-      ];
+      final page = await repo.history(limit: 200, before: before);
+      final items = page.items;
       today.addAll(items.where((r) => !r.at.isBefore(start)));
-      before = page['next_before'];
+      before = page.nextBefore;
       if (items.isEmpty || items.last.at.isBefore(start)) break;
     } while (before != null);
     _readings
@@ -242,20 +238,142 @@ class ReminderList extends ChangeNotifier {
   }
 }
 
-/// The caregiver the patient assigned by email. In memory only (UI only for now).
+/// The caregiver the patient added by email, kept in step with Firestore.
+///
+/// The invitation is the document `links/{caregiverEmail}`. The caregiver
+/// registers in the Caregiver app with that email and the document becomes
+/// `active`. Deleting it ends the caregiver's access at once.
 class CaregiverAssignment extends ChangeNotifier {
-  String? _email;
+  CaregiverAssignment({FirebaseFirestore? firestore})
+    : _dbOverride = firestore;
 
+  // Resolved on first use so tests can build it without Firebase.
+  final FirebaseFirestore? _dbOverride;
+  FirebaseFirestore get _db => _dbOverride ?? FirebaseFirestore.instance;
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _sub;
+  String? _uid;
+  String? _email;
+  String? _status;
+  bool _shareGlucose = true;
+
+  /// The caregiver's email, or null when none was added.
   String? get email => _email;
 
-  void assign(String email) {
-    _email = email;
+  /// `pending` (they have not registered yet) or `active`; null without a caregiver.
+  String? get status => _status;
+  bool get active => _status == 'active';
+
+  /// Whether the caregiver may read the glucose history.
+  bool get shareGlucose => _shareGlucose;
+
+  /// Starts following this patient's link. Call when the patient signs in.
+  void bind(String uid) {
+    if (_uid == uid) return;
+    unbind();
+    _uid = uid;
+    _sub = _db
+        .collection('links')
+        .where('patientUid', isEqualTo: uid)
+        .limit(1)
+        .snapshots()
+        .listen(
+          _onSnapshot,
+          onError: (Object e) => debugPrint('Caregiver link: $e'),
+        );
+  }
+
+  /// Stops following and forgets the link locally. It does not delete it.
+  void unbind() {
+    _sub?.cancel();
+    _sub = null;
+    _uid = null;
+    if (_email != null || _status != null) {
+      _email = null;
+      _status = null;
+      notifyListeners();
+    }
+  }
+
+  void _onSnapshot(QuerySnapshot<Map<String, dynamic>> s) {
+    if (s.docs.isEmpty) {
+      _email = null;
+      _status = null;
+    } else {
+      final d = s.docs.first;
+      final data = d.data();
+      _email = d.id;
+      _status = data['status'] == 'active' ? 'active' : 'pending';
+      _shareGlucose = data['shareGlucose'] != false;
+    }
     notifyListeners();
   }
 
-  void remove() {
-    _email = null;
-    notifyListeners();
+  /// Adds [email] as the caregiver, replacing the current one. One caregiver
+  /// email follows one patient: if another patient already added it, this
+  /// throws `err_link_taken`.
+  Future<void> assign(String email) async {
+    final uid = _uid;
+    if (uid == null) throw const AppException('error_generic');
+    final mail = email.trim().toLowerCase();
+    if (mail == _email) return;
+    final links = _db.collection('links');
+    final batch = _db.batch();
+    final old = _email;
+    if (old != null) batch.delete(links.doc(old));
+    batch.set(links.doc(mail), <String, Object?>{
+      'patientUid': uid,
+      'caregiverEmail': mail,
+      'status': 'pending',
+      'shareGlucose': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    try {
+      await batch.commit();
+    } on FirebaseException catch (e) {
+      throw e.code == 'permission-denied'
+          ? const AppException('err_link_taken')
+          : AppException.of(e);
+    }
+  }
+
+  /// Removes the caregiver. They lose access immediately.
+  Future<void> remove() async {
+    final mail = _email;
+    if (mail == null) return;
+    try {
+      await _db.collection('links').doc(mail).delete();
+    } on FirebaseException catch (e) {
+      throw AppException.of(e);
+    }
+  }
+
+  /// Sends an SOS notification for the caregiver. Returns whether a caregiver
+  /// who has registered will see it (false: none added, or not registered yet).
+  Future<bool> sendSos({required String patientName, String? message}) async {
+    final uid = _uid;
+    final mail = _email;
+    if (uid == null || mail == null) return false;
+    try {
+      await _db.collection('caregiverNotifications').add(<String, Object?>{
+        'patientUid': uid,
+        'patientName': patientName,
+        'caregiverEmail': mail,
+        'kind': 'sos',
+        'message': message ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+    } on FirebaseException catch (e) {
+      throw AppException.of(e);
+    }
+    return active;
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 }
 
@@ -280,7 +398,4 @@ extension AppStateX on BuildContext {
   AlertInbox get inbox => AppScope.of<AlertInbox>(this);
   ReminderList get reminders => AppScope.of<ReminderList>(this);
   CaregiverAssignment get caregiver => AppScope.of<CaregiverAssignment>(this);
-
-  /// The API client, for use in callbacks.
-  Api get api => AppScope.read<AuthSession>(this).api;
 }

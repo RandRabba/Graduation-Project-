@@ -431,11 +431,11 @@ abstract final class L10n {
     'invite_sent': 'Invitation sent.',
     'invite_declined': '{name} declined your invitation.',
     'status_active': 'Active',
-    'status_pending': 'Waiting for acceptance',
+    'status_pending': 'Waiting for them to register',
     'caregiver_active_body':
         'They receive your emergency SOS and very low or very high glucose notifications.',
     'caregiver_pending_body':
-        'They’ll start receiving your notifications once they accept in the $kAppName Care Portal.',
+        'They’ll start receiving your notifications as soon as they register in the $kAppName Caregiver app with this email.',
     'share_glucose': 'Share glucose readings',
     'share_glucose_body': 'Let your caregiver see your glucose history.',
     'change_caregiver': 'Change caregiver',
@@ -572,6 +572,12 @@ abstract final class L10n {
     'ls_stress': 'Take 5 minutes of slow breathing when you feel stressed.',
     'ls_hydrate': 'Choose water instead of sugary drinks.',
     'ls_feet': 'Check your feet daily for cuts or redness.',
+    // sign in / sign up / caregiver link errors
+    'err_cred': 'Email or password is incorrect.',
+    'err_used': 'An account with this email already exists. Try signing in.',
+    'err_many': 'Too many attempts. Please wait a moment and try again.',
+    'err_not_patient': 'This isn’t a patient account. Caregivers use the $kAppName Caregiver app.',
+    'err_link_taken': 'This email is already linked to another patient.',
   };
 
   static const _ar = <String, String>{
@@ -975,11 +981,11 @@ abstract final class L10n {
     'invite_sent': 'تم إرسال الدعوة.',
     'invite_declined': 'رفض {name} دعوتك.',
     'status_active': 'نشط',
-    'status_pending': 'بانتظار القبول',
+    'status_pending': 'بانتظار تسجيله',
     'caregiver_active_body':
         'يتلقى نداءات الطوارئ وإشعارات انخفاض السكر أو ارتفاعه الشديدين.',
     'caregiver_pending_body':
-        'سيبدأ في تلقي إشعاراتك بعد قبول الدعوة من بوابة الرعاية في $kAppName.',
+        'سيبدأ في تلقي إشعاراتك فور تسجيله في تطبيق $kAppName لمقدّم الرعاية بنفس هذا البريد.',
     'share_glucose': 'مشاركة قراءات السكر',
     'share_glucose_body': 'اسمح لمقدّم الرعاية برؤية سجل السكر.',
     'change_caregiver': 'تغيير مقدّم الرعاية',
@@ -1109,6 +1115,12 @@ abstract final class L10n {
     'ls_stress': 'خذ 5 دقائق من التنفس البطيء عند الشعور بالتوتر.',
     'ls_hydrate': 'اختر الماء بدلًا من المشروبات المحلاة.',
     'ls_feet': 'افحص قدميك يوميًا بحثًا عن جروح أو احمرار.',
+    // sign in / sign up / caregiver link errors
+    'err_cred': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    'err_used': 'يوجد حساب بهذا البريد بالفعل. جرّب تسجيل الدخول.',
+    'err_many': 'محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.',
+    'err_not_patient': 'هذا ليس حساب مريض. يستخدم مقدّمو الرعاية تطبيق $kAppName لمقدّم الرعاية.',
+    'err_link_taken': 'هذا البريد مرتبط بمريض آخر بالفعل.',
   };
 
   static String of(

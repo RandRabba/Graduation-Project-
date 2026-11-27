@@ -1,13 +1,14 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'ai_screen.dart';
-import 'api.dart';
 import 'app_state.dart';
 import 'auth.dart';
 import 'auth_screen.dart';
 import 'common.dart';
 import 'demo_data.dart';
+import 'firebase_options.dart';
 import 'l10n.dart';
 import 'meals_screen.dart';
 import 'notifications.dart';
@@ -17,14 +18,17 @@ import 'sensor_screen.dart';
 import 'summary_screen.dart';
 import 'theme.dart';
 
-void main() => runApp(const CgmApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const CgmApp());
+}
 
 class CgmApp extends StatefulWidget {
-  const CgmApp({super.key, this.api, this.tokens, this.scheduler, this.repos});
+  const CgmApp({super.key, this.auth, this.scheduler, this.repos});
 
-  /// Injected by tests. By default: the DMS backend, secure storage and device notifications.
-  final Api? api;
-  final TokenStore? tokens;
+  /// Injected by tests. By default: Firebase sign in and device notifications.
+  final AuthSession? auth;
   final ReminderScheduler? scheduler;
 
   /// Reminders, glucose, alerts and doctor chat. By default: the example records in demo_data.dart.
@@ -43,10 +47,7 @@ class _CgmAppState extends State<CgmApp> {
   final _meals = MealLog();
   final _caregiver = CaregiverAssignment();
   final _nav = GlobalKey<NavigatorState>();
-  late final _auth = AuthSession(
-    widget.api ?? Api(),
-    widget.tokens ?? SecureTokenStore(),
-  );
+  late final _auth = widget.auth ?? AuthSession();
   late final _repos = widget.repos ?? demoRepositories();
   late final _inbox = AlertInbox(_repos.alerts);
   late final _reminders = ReminderList(
@@ -73,13 +74,14 @@ class _CgmAppState extends State<CgmApp> {
     _nav.currentState?.popUntil((r) => r.isFirst);
     switch (_status!) {
       case AuthStatus.signedIn:
-        _sensor.loadToday(_auth.api).catchError((_) {});
+        _caregiver.bind(_auth.user!.id);
+        _sensor.loadToday(_repos.glucose).catchError((_) {});
         _inbox.refresh();
         _reminders.load().catchError((_) {});
       case AuthStatus.signedOut:
         _sensor.remove();
         _meals.clear();
-        _caregiver.remove();
+        _caregiver.unbind();
         _inbox.unread = 0;
         _reminders.clear();
       case AuthStatus.unknown:

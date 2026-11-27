@@ -15,7 +15,7 @@ String? _validateEmail(BuildContext context, String? v) {
   return null;
 }
 
-/// Same rule as the backend: 8+ characters with a letter and a number.
+/// App rule: 8+ characters with a letter and a number (Firebase itself only needs 6).
 String? _validatePassword(BuildContext context, String? v) {
   final s = v ?? '';
   if (s.length < 8) return context.tr('v_password_len');
@@ -129,6 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -137,8 +139,27 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// UI only for now: opens the app without checking the fields or contacting the server.
-  void _submit() => AppScope.read<AuthSession>(context).enter();
+  /// Signs in with Firebase. On success the app's auth listener swaps this
+  /// screen for the app.
+  Future<void> _submit() async {
+    if (_busy || !_form.currentState!.validate()) return;
+    final auth = AppScope.read<AuthSession>(context);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await auth.signIn(_email.text, _password.text);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = errorText(context, e);
+        _busy = false;
+      });
+      return;
+    }
+    if (mounted) setState(() => _busy = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         if (expired) ...[
           ErrorBanner(context.tr('session_expired')),
+          const SizedBox(height: Gap.lg),
+        ],
+        if (_error != null) ...[
+          ErrorBanner(_error!),
           const SizedBox(height: Gap.lg),
         ],
         AppCard(
@@ -180,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   PrimaryButton(
                     context.tr('sign_in'),
                     icon: Icons.login_rounded,
-                    onPressed: _submit,
+                    onPressed: _busy ? null : _submit,
                   ),
                 ],
               ),
@@ -233,6 +258,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _phone = TextEditingController();
   DateTime? _dob;
   String? _type;
+  bool _busy = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -254,9 +281,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (d != null) setState(() => _dob = d);
   }
 
-  /// UI only for now: opens the app without checking the fields or creating an account.
-  /// The app's auth listener removes this page from the stack.
-  void _submit() => AppScope.read<AuthSession>(context).enter(newAccount: true);
+  /// Creates the account with Firebase. On success the app's auth listener
+  /// removes this page and opens the app.
+  Future<void> _submit() async {
+    if (_busy || !_form.currentState!.validate()) return;
+    final auth = AppScope.read<AuthSession>(context);
+    final phone = _phone.text.trim();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await auth.signUp(
+        email: _email.text,
+        password: _password.text,
+        fullName: _name.text,
+        dateOfBirth: _dob,
+        diabetesType: _type,
+        phone: phone.isEmpty ? null : phone,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = errorText(context, e);
+        _busy = false;
+      });
+      return;
+    }
+    if (mounted) setState(() => _busy = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -266,6 +319,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       title: context.tr('signup_title'),
       subtitle: context.tr('signup_subtitle'),
       children: [
+        if (_error != null) ...[
+          ErrorBanner(_error!),
+          const SizedBox(height: Gap.lg),
+        ],
         AppCard(
           child: Form(
             key: _form,
@@ -389,7 +446,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   PrimaryButton(
                     context.tr('create_account'),
                     icon: Icons.person_add_alt_1_rounded,
-                    onPressed: _submit,
+                    onPressed: _busy ? null : _submit,
                   ),
                 ],
               ),

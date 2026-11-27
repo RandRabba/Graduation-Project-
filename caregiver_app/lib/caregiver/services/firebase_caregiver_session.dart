@@ -333,6 +333,17 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
 
   static String _str(Object? v) => v is String ? v.trim() : '';
 
+  /// The patient app stores a code such as `type1`; documents written by hand
+  /// may hold plain text, which is shown as it is.
+  static LocalizedText _diabetes(String v) => switch (v) {
+    'type1' => const LocalizedText('Type 1', 'النوع الأول'),
+    'type2' => const LocalizedText('Type 2', 'النوع الثاني'),
+    'gestational' => const LocalizedText('Gestational', 'سكري الحمل'),
+    'prediabetes' => const LocalizedText('Prediabetes', 'مقدمات السكري'),
+    'other' => const LocalizedText('Other', 'آخر'),
+    _ => _t(v),
+  };
+
   static CaregiverProfile _profileFrom(String email, Map<String, dynamic> d) {
     final String saved = _str(d['fullName']);
     final String name = saved.isEmpty ? _nameFromEmail(email) : saved;
@@ -350,7 +361,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
     return Patient(
       name: _t(name),
       initials: _t(_initials(name)),
-      diabetesType: _t(_str(d['diabetesType'])),
+      diabetesType: _diabetes(_str(d['diabetesType'])),
       doctorName: _t(''),
       clinic: _t(''),
       emergencyContact: _noContact,

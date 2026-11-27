@@ -59,6 +59,18 @@ What a linked caregiver can read: the patient's profile, reminders, and, only
 when `shareGlucose` is true, readings. They get their own notifications from
 `caregiverNotifications`. They can write nothing but `read` on those.
 
+## Patient app (real flow)
+
+The patient app signs up with Firebase Auth and creates `users/{uid}` with
+`role: patient`. "Add caregiver" writes `links/{caregiverEmail}` (status
+`pending`, `shareGlucose` true), and "Remove caregiver" deletes it. The SOS
+button adds a `caregiverNotifications` document (`kind: sos`). Run it with
+the same Firebase project: copy `lib/firebase_options.dart` from the caregiver
+app, or run `flutterfire configure` in the patient app.
+
+A caregiver email and a patient email must be different accounts: one email is
+one Firebase account.
+
 ## Try the caregiver app before the patient app is connected
 
 Create these in the Firestore console (console writes ignore the rules):
@@ -68,7 +80,9 @@ Create these in the Firestore console (console writes ignore the rules):
 - `links/nour@example.com` : `patientUid` "patient-demo", `caregiverEmail`
   "nour@example.com", `status` "pending", `shareGlucose` false (boolean)
 
-Then register `nour@example.com` in the caregiver app.
+Then register `nour@example.com` in the caregiver app. (With the patient app
+connected you do not need these documents: sign up as a patient and add the
+caregiver from the app.)
 
 ## Known limits
 

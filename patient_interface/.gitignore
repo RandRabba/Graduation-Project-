@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment files (secrets). Firebase client config files are NOT ignored.
+.env
+.env.*
+!.env.example

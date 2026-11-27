@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "762322368727",
+    "project_id": "dmsa-d5604",
+    "storage_bucket": "dmsa-d5604.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:762322368727:android:9372d01eff7b38133d9892",
+        "android_client_info": {
+          "package_name": "com.example.caregiver_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqb3ssntLI1jiUpv7AIGmBYnQeVxsOsjI"
+        },
+        {
+          "current_key": "AIzaSyAsfrtbVAvyrUVJRlMJXZAJsScfnuuuzvU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:762322368727:android:d33e688ce2d81c3f3d9892",
+        "android_client_info": {
+          "package_name": "com.example.patient_interface"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqb3ssntLI1jiUpv7AIGmBYnQeVxsOsjI"
+        },
+        {
+          "current_key": "AIzaSyAsfrtbVAvyrUVJRlMJXZAJsScfnuuuzvU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

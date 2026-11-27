@@ -1,24 +1,29 @@
-import 'package:flutter/material.dart';
-import 'api.dart';
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+
+import 'app_error.dart';
 import 'models.dart';
 
 enum AuthStatus { unknown, signedOut, signedIn }
 
-/// Thrown when someone signs in to the patient app with a doctor or caregiver account.
-class NotPatientAccount implements Exception {
-  const NotPatientAccount();
-}
-
-/// The signed-in patient. Owns the API client and keeps its session token in [TokenStore].
+/// The signed-in patient, backed by Firebase Authentication (who you are) and
+/// the Firestore document `users/{uid}` (your profile).
+///
+/// Data layout and permissions: see `firebase/README.md` and
+/// `firebase/firestore.rules` at the root of the repository.
 class AuthSession extends ChangeNotifier {
-  AuthSession(this.api, this._tokens) {
-    api.onUnauthorized = () {
-      if (status == AuthStatus.signedIn) signOut(expired: true);
-    };
-  }
+  AuthSession({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _authOverride = auth,
+      _dbOverride = firestore;
 
-  final Api api;
-  final TokenStore _tokens;
+  // Resolved on first use so tests can build the session without Firebase.
+  final FirebaseAuth? _authOverride;
+  final FirebaseFirestore? _dbOverride;
+  FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
+  FirebaseFirestore get _db => _dbOverride ?? FirebaseFirestore.instance;
 
   AuthStatus status = AuthStatus.unknown;
   AppUser? user;
@@ -26,79 +31,155 @@ class AuthSession extends ChangeNotifier {
   /// True right after sign-up, so the app shows its guided tour once.
   bool showTour = false;
 
-  /// Set when the session ended because the server rejected it.
+  /// Set when the session ended because it was no longer valid.
   bool expired = false;
 
   /// Set when a saved session couldn't be checked (e.g. offline at launch).
-  ApiException? restoreError;
+  AppException? restoreError;
 
   /// Reopens the saved session, if any.
   Future<void> restore() async {
     restoreError = null;
-    String? token;
+    User? current;
     try {
-      token = await _tokens.read();
+      // Firebase restores its own saved session; the first event carries it.
+      current = await _auth.authStateChanges().first;
     } catch (_) {
-      token = null; // unreadable keystore entry: treat as signed out
+      current = null;
     }
-    if (token == null) return _set(AuthStatus.signedOut);
-    api.token = token;
+    if (current == null) return _set(AuthStatus.signedOut);
     try {
-      final me = AppUser.fromJson(await api.get('/auth/me'));
-      if (me.role != 'patient') return signOut();
-      user = me;
-      _set(AuthStatus.signedIn);
-    } on ApiException catch (e) {
-      if (e.status == 401 || e.status == 403) return signOut(expired: true);
-      restoreError = e; // keep the token; the splash offers a retry
+      await _enter(current);
+    } catch (e) {
+      final failure = AppException.of(e);
+      if (failure.key == 'err_not_patient') return signOut();
+      restoreError = failure; // keep the session; the splash offers a retry
       notifyListeners();
     }
   }
 
-  Future<void> signIn(String email, String password) async => _start(
-    await api.post('/auth/login', {'email': email, 'password': password}),
-  );
+  Future<void> signIn(String email, String password) async {
+    try {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final u = cred.user;
+      if (u == null) throw const AppException('error_generic');
+      await _enter(u);
+    } catch (e) {
+      throw AppException.of(e);
+    }
+  }
 
-  Future<void> signUp(Map<String, Object?> fields) async {
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    DateTime? dateOfBirth,
+    String? diabetesType,
+    String? phone,
+  }) async {
+    final mail = email.trim().toLowerCase();
+    final User u;
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: mail,
+        password: password,
+      );
+      final created = cred.user;
+      if (created == null) throw const AppException('error_generic');
+      u = created;
+    } catch (e) {
+      throw AppException.of(e);
+    }
+    try {
+      await _db.collection('users').doc(u.uid).set(<String, Object?>{
+        'role': 'patient',
+        'email': mail,
+        'fullName': fullName.trim(),
+        'phone': phone ?? '',
+        'diabetesType': diabetesType ?? '',
+        'dateOfBirth': dateOfBirth == null ? '' : _dateText(dateOfBirth),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // Do not leave an account without a profile behind.
+      try {
+        await u.delete();
+      } catch (_) {
+        await _auth.signOut();
+      }
+      throw AppException.of(e);
+    }
     showTour = true;
-    await _start(
-      await api.post('/auth/register', {...fields, 'role': 'patient'}),
-    );
+    try {
+      await _enter(u);
+    } catch (e) {
+      showTour = false;
+      throw AppException.of(e);
+    }
   }
 
-  Future<void> _start(dynamic res) async {
-    final me = AppUser.fromJson(res['user']);
-    if (me.role != 'patient') throw const NotPatientAccount();
-    api.token = res['token'];
-    await _tokens.write(res['token']);
-    user = me;
+  /// Loads (or, for an account that has none yet, creates) the profile and
+  /// opens the app. Signs out and throws `err_not_patient` for any other role.
+  Future<void> _enter(User u) async {
+    final ref = _db.collection('users').doc(u.uid);
+    var data = (await ref.get()).data();
+    if (data == null) {
+      final mail = (u.email ?? '').toLowerCase();
+      data = <String, Object?>{
+        'role': 'patient',
+        'email': mail,
+        'fullName': '',
+        'phone': '',
+        'diabetesType': '',
+        'dateOfBirth': '',
+      };
+      await ref.set(<String, Object?>{
+        ...data,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } else if (data['role'] != 'patient') {
+      await _auth.signOut();
+      throw const AppException('err_not_patient');
+    }
+    user = AppUser.fromDoc(u.uid, data);
     expired = false;
     _set(AuthStatus.signedIn);
   }
 
-  /// Opens the app without an account (the login and sign-up screens are UI only for now).
-  /// [newAccount] is true from sign-up, which shows the guided tour once.
-  void enter({bool newAccount = false}) {
-    expired = false;
-    showTour = newAccount;
-    _set(AuthStatus.signedIn);
-  }
-
-  /// Replace the cached profile after a change the server already saved.
+  /// Replace the cached profile and save it. The role and the email never
+  /// change (the Firestore rules refuse it).
   void updateUser(AppUser u) {
     user = u;
     notifyListeners();
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    unawaited(
+      _db
+          .collection('users')
+          .doc(uid)
+          .update(<String, Object?>{
+            'fullName': u.fullName,
+            'phone': u.phone ?? '',
+            'diabetesType': u.diabetesType ?? '',
+            'dateOfBirth': u.dateOfBirth == null
+                ? ''
+                : _dateText(u.dateOfBirth!),
+          })
+          .catchError((Object e) => debugPrint('Could not save profile: $e')),
+    );
   }
 
   Future<void> signOut({bool expired = false}) async {
     this.expired = expired;
-    api.token = null;
     user = null;
     showTour = false;
     restoreError = null;
     _set(AuthStatus.signedOut);
     try {
-      await _tokens.write(null);
+      await _auth.signOut();
     } catch (_) {}
   }
 
@@ -106,4 +187,9 @@ class AuthSession extends ChangeNotifier {
     status = s;
     notifyListeners();
   }
+
+  static String _dateText(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }
