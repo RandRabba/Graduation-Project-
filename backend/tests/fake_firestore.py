@@ -1,12 +1,22 @@
 """A tiny in-memory stand-in for the Firestore client.
 
 It supports only what the backend uses: collection/document paths, get, set,
-delete, stream, ``where(filter=FieldFilter(...))`` (``>=`` and ``==``), ``order_by`` and ``limit``.
+create, update, delete, stream, ``where(filter=FieldFilter(...))`` (``>=`` and
+``==``), ``order_by``, ``limit``, and a transaction with get/update/delete.
+Everything runs in one thread, so a "transaction" is just the calls in order.
 """
 
 from datetime import datetime, timezone
 
+from google.api_core.exceptions import AlreadyExists, NotFound
 from google.cloud import firestore
+
+
+def _resolve(data):
+    return {
+        k: (datetime.now(timezone.utc) if v is firestore.SERVER_TIMESTAMP else v)
+        for k, v in data.items()
+    }
 
 
 class FakeSnapshot:
@@ -27,15 +37,22 @@ class FakeDocument:
         self._store = store
         self._path = path  # (collection, id, collection, id, ...)
 
-    def get(self):
+    def get(self, transaction=None):
         return FakeSnapshot(self._path[-1], self._store.get(self._path))
 
     def set(self, data, merge=False):
-        new = {
-            k: (datetime.now(timezone.utc) if v is firestore.SERVER_TIMESTAMP else v)
-            for k, v in data.items()
-        }
+        new = _resolve(data)
         self._store[self._path] = {**self._store.get(self._path, {}), **new} if merge else new
+
+    def create(self, data):
+        if self._path in self._store:
+            raise AlreadyExists("document already exists")
+        self._store[self._path] = _resolve(data)
+
+    def update(self, data):
+        if self._path not in self._store:
+            raise NotFound("no document to update")
+        self._store[self._path] = {**self._store[self._path], **_resolve(data)}
 
     def delete(self):
         self._store.pop(self._path, None)
@@ -85,9 +102,20 @@ class FakeQuery:
         return iter(FakeSnapshot(i, d) for i, d in rows)
 
 
+class FakeTransaction:
+    def update(self, ref, data):
+        ref.update(data)
+
+    def delete(self, ref):
+        ref.delete()
+
+
 class FakeFirestore:
     def __init__(self):
         self._store = {}
+
+    def transaction(self):
+        return FakeTransaction()
 
     def collection(self, name):
         return FakeQuery(self._store, (name,))

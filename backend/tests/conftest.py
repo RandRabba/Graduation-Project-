@@ -6,7 +6,9 @@ from fastapi.testclient import TestClient
 from app.auth import deps
 from app.auth.tokens import InvalidTokenError
 from app.core.firebase import get_db
+from app.core.throttle import redeem_limiter
 from app.main import app
+from app.repositories import link_code_repository
 from tests.fake_firestore import FakeFirestore
 
 T0 = datetime(2026, 11, 27, 9, 0, tzinfo=timezone.utc)
@@ -18,6 +20,7 @@ TOKENS = {
     "doctor-token": {"uid": "doc1", "email": "roa@example.com"},
     "doctor2-token": {"uid": "doc2", "email": "second@example.com"},
     "patient-token": {"uid": "p1", "email": "sobhi@example.com"},
+    "patient2-token": {"uid": "p2", "email": "other@example.com"},
     "caregiver-token": {"uid": "care1", "email": "care@example.com"},
     "ghost-token": {"uid": "ghost", "email": "ghost@example.com"},
 }
@@ -43,6 +46,13 @@ def db():
     d.put("patients", "p1", "readings", "broken-3", {"at": T0, "source": "manual"})  # no value
     d.put("patients", "p2", "readings", "manual-9", {"value": 90, "at": T1, "source": "manual"})
     return d
+
+
+@pytest.fixture(autouse=True)
+def fake_transactions(monkeypatch):
+    """Link codes use Firestore transactions; the fake has no server, so just run the work."""
+    monkeypatch.setattr(link_code_repository, "run_transaction", lambda db, work: work(db.transaction()))
+    redeem_limiter.clear_all()
 
 
 @pytest.fixture

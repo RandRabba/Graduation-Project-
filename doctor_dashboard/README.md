@@ -26,7 +26,12 @@ sign-in lives in this browser tab (sessionStorage) and ends with **Sign out** in
 closes. The default stays `'mock'`. How to start the backend and what it answers today: `backend/README.md`.
 
 Not connected yet (these fail or stay empty with the backend): consultations, prescriptions, instructions, chat,
-reviewing alerts, reports, reminders and link codes. Patient ids are the numbers the backend gives (1, 2, 3...).
+reviewing alerts, reports and reminders. Patient ids are the numbers the backend gives (1, 2, 3...).
+
+Link codes work with the backend: **Patients > Link a patient** asks the backend for a single-use code for one
+patient. The patient redeems it with `POST /link-codes/redeem` using their own sign-in (the Patient App screen for it
+is not built yet; until then try it in the backend's Swagger page, see `backend/README.md`), and the patient then
+appears in the list.
 
 ## Pages
 
@@ -123,7 +128,7 @@ js/
 
 ## Not functional yet (needs the FastAPI backend)
 
-- Secure sign-in and secure doctor–patient linking after registration in the Patient App.
+- Entering the link code inside the Patient App (the backend side exists: `POST /link-codes/redeem`).
 - Synchronizing prescriptions, medication reminders, instructions and messages with the Patient App
   (the payload is prepared: `syncPayload()` in `core/medications.js`, shown as "Sync pending").
 - Receiving real readings, meals, dose logs and consultation requests from the Patient App.

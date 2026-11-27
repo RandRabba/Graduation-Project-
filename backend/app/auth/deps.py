@@ -8,7 +8,7 @@ Firestore rules and the apps use). Doctor accounts are created only with
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.auth.models import ROLE_DOCTOR, CurrentUser
+from app.auth.models import ROLE_DOCTOR, ROLE_PATIENT, CurrentUser
 from app.auth.tokens import InvalidTokenError, TokenServiceError, verify_token
 from app.core.firebase import get_db
 
@@ -65,5 +65,14 @@ def require_doctor(user: CurrentUser = Depends(get_current_user)) -> CurrentUser
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Doctors only",
+        )
+    return user
+
+
+def require_patient(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    if user.role != ROLE_PATIENT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Patients only",
         )
     return user

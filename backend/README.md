@@ -32,6 +32,10 @@ It needs the service-account key at `backend/secrets/firebase-service-account.js
 | `GET /patients` | `{"1": {name, age, sex, reportedType, linkedAt}, "2": ...}` keyed by the patient's number |
 | `GET /patients/{id}/readings?limit=500&since=<unix s>` | `[{id, v, at, src: cgm\|manual, type: FBS\|RBS\|PPBS}]`, newest first |
 | `GET /patients/{id}/{meals,consultations,doses,requests,instructions,chat}` and `GET /reminders` | `[]` for now: not stored anywhere yet, but the dashboard asks for them on load |
+| `POST /doctor/link-codes` body `{label}` | `201 {id, label, code, at, st: "pending", usedAt: null}`: a new single-use code for one patient (at most 50 unused: more is 409) |
+| `GET /doctor/link-codes` | this doctor's codes, pending and used, newest first |
+| `DELETE /doctor/link-codes/{id}` | `204`; cancels an unused code (404 unknown or not yours, 409 already used) |
+| `POST /link-codes/redeem` body `{code}` (**patient** token) | `{alreadyLinked, doctorName}`: uses the code up and links this patient to the doctor |
 
 **Patient numbers.** `{id}` is a small whole number (1, 2, 3...) that belongs to
 the calling doctor, not the patient's Firebase uid: the dashboard uses whole
@@ -46,6 +50,23 @@ route: 403. Patient type codes from the app (`type1`, `type2`...) are sent as
 `Type 1`, `Type 2`... as the dashboard names them.
 
 Shapes follow `doctor_dashboard/js/data/http.js`. Times are Unix seconds.
+
+## Link codes
+
+The doctor makes a code in the dashboard (**Patients > Link a patient**), the patient redeems it, and the patient
+joins that doctor's list with the next number. Codes look like `DMS-2345-6789-AB`, work **once**, for one account,
+and never expire (the doctor can cancel an unused one). They live in `linkCodes/{code}`, which the Firestore rules
+never match, so apps cannot read them; only this server can.
+
+- A wrong, used or cancelled code all answer the same `404`. After 5 wrong codes in 15 minutes an account is
+  answered `429` until the oldest wrong attempt is 15 minutes old (kept in memory per server process; a hosted
+  deployment should also limit requests per IP address).
+- Only a **patient** token may redeem (doctor and caregiver tokens: 403). Typing is forgiving: `dms 2345 6789 ab` works.
+- If the link cannot be stored, the code is given back so the patient can try again.
+
+Until the Patient App has its "enter the code" screen, try it in Swagger: sign in to the dashboard as the doctor and
+make a code, then run `python -m scripts.get_token patient@example.com`, **Authorize** with that token and call
+`POST /api/v1/link-codes/redeem` with `{"code": "DMS-..."}`. Reload the dashboard: the patient is there.
 
 ## Create a doctor and try the API
 
@@ -87,5 +108,6 @@ email and password, and every request carries the ID token.
 What works: sign-in and sign-out, the doctor's patients, their readings and the
 status and alerts the dashboard calculates from them. What does not exist yet,
 so it fails or stays empty: consultations, prescriptions, instructions, chat,
-reviewing alerts, reports, reminders, link codes (`link_patient` is used
-instead), and saving the doctor's profile (it stays in the browser).
+reviewing alerts, reports, reminders, entering the code inside the Patient App
+(see "Link codes"), and saving the doctor's profile (it stays in the browser).
+`scripts/link_patient` still links a patient straight from the terminal.

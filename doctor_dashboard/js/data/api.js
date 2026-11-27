@@ -221,9 +221,9 @@ export function docPhoto(d = getDoctor()) { return d.photo === 'default' ? DEFAU
 // and is then linked to the doctor (previous readings become visible, status "Awaiting initial consultation").
 // A code is single-use (once a Patient App account redeems it, it is bound to that account and nobody else can use
 // it) and has no expiry. The doctor can cancel a code that has not been used.
-// TODO(backend): the backend generates and stores the codes (POST / GET / DELETE /doctor/link-codes, see http.js).
-// Redeeming happens in the Patient App endpoint, which binds the code to that patient account and marks it used
-// (st: 'used', usedAt). The dashboard never redeems a code.
+// API mode: the backend generates and stores the codes (POST / GET / DELETE /doctor/link-codes, see http.js).
+// Redeeming happens in the backend's POST /link-codes/redeem, called with the patient's own token, which binds the
+// code to that patient account and marks it used (st: 'used', usedAt). The dashboard never redeems a code.
 // Mock mode: codes are kept in this browser (localStorage 'dms-link-codes') and cannot be redeemed here.
 // The label is the doctor's own reference; only the code itself is ever put in the QR code.
 // Code record: { id, label, code, at (created), st: 'pending' | 'used', usedAt }

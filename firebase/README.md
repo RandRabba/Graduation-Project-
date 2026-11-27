@@ -41,7 +41,8 @@ Field names are camelCase. Times are Firestore timestamps.
 | `patients/{uid}/reminders/{id}` | the patient | as the patient app's `Reminder` (`assignedBy` marks doctor reminders) |
 | `patients/{uid}/alerts/{id}` | the patient | the patient's own alert history: `type` (`critical_low`, `low`, `high`, `critical_high`), `message`, `at`, `read`, `glucose`, `readingAt`, `caregiverNotified`, `createdAt`. The id is the id of the reading that raised it |
 | `caregiverNotifications/{id}` | the patient app, one per caregiver | `patientUid`, `caregiverEmail`, `kind` (`critical_low`, `critical_high`, `sos`), `readingId`, `readingAt`, `glucose` (only when the patient shares glucose), `message`, `createdAt`, `read` (the caregiver can only change `read`). A glucose notification has the id `<patientUid>_<readingId>` |
-| `doctors/{doctorUid}/patients/{patientUid}` | the backend only (scripts today) | `patientUid`, `patientEmail`, `linkedAt`, `seq` (the patient's number for this doctor, the id the dashboard uses). "This doctor follows this patient." `doctors/{doctorUid}.lastSeq` is the last number given out. The rules never match `doctors/...`, so no app can read or write it |
+| `doctors/{doctorUid}/patients/{patientUid}` | the backend only (redeeming a link code; `scripts/link_patient`) | `patientUid`, `patientEmail`, `linkedAt`, `seq` (the patient's number for this doctor, the id the dashboard uses). "This doctor follows this patient." `doctors/{doctorUid}.lastSeq` is the last number given out. The rules never match `doctors/...`, so no app can read or write it |
+| `linkCodes/{code}` | the backend only | `doctorUid`, `label` (the doctor's note), `status` (`pending` or `used`), `createdAt`, `usedAt`, `usedBy` (the patient's uid). The id is the code itself (`DMS-2345-6789-AB`), so a code cannot exist twice. The rules never match `linkCodes/...` |
 
 The id of a `links` document is the caregiver's **lower-case email**.
 

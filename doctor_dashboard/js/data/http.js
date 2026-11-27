@@ -3,20 +3,21 @@
 // login.html; a 401 answer signs the doctor out and goes there too.
 //
 // WHAT THE BACKEND ANSWERS TODAY (backend/README.md): GET /doctor, GET /patients (patient ids are small whole numbers,
-// one sequence per doctor), GET /patients/{id}/readings, and an empty list for meals, consultations, doses, requests,
-// instructions, chat and /reminders. Everything else below is NOT implemented yet: the doctor's actions (consultations,
-// instructions, chat, reviewing alerts, reports, reminders), link codes and /protocols. Those requests fail, and
-// nothing is synchronized with the Patient App until they exist.
+// one sequence per doctor), GET /patients/{id}/readings, the link codes (POST / GET / DELETE /doctor/link-codes), and an
+// empty list for meals, consultations, doses, requests, instructions, chat and /reminders. Everything else below is NOT
+// implemented yet: the doctor's actions (consultations, instructions, chat, reviewing alerts, reports, reminders) and
+// /protocols. Those requests fail, and nothing is synchronized with the Patient App until they exist.
 // These are the endpoints the frontend expects; every response uses the same data shapes
 // as the mock data (js/data/mock/sample-data.js). Timestamps are Unix seconds.
 //
 //   GET    /doctor                                  doctor profile          PUT /doctor
 //   POST   /doctor/link-codes                       body {label} → {id, label, code, at, st: 'pending', usedAt: null}
-//          (the backend generates a unique single-use code for one patient, no expiry, and stores it)
+//          (the backend generates a unique single-use code for one patient, no expiry, and stores it; the answer is 201,
+//           id is the code itself, and a doctor may hold at most 50 unused codes: more answers 409)
 //   GET    /doctor/link-codes                       [{id, label, code, at, st: 'pending'|'used', usedAt}]
-//   DELETE /doctor/link-codes/{id}                  cancel a pending (unused) code
-//          Redeeming is NOT a dashboard endpoint: the Patient App's endpoint binds the code to that patient
-//          account and marks it used.
+//   DELETE /doctor/link-codes/{id}                  cancel a pending (unused) code → 204 (404 unknown, 409 already used)
+//          Redeeming is NOT a dashboard endpoint: the Patient App calls POST /link-codes/redeem with the patient's own
+//          token; the backend binds the code to that patient account, marks it used and links the patient to the doctor.
 //   GET    /patients                                { id: {name, age, sex, reportedType, linkedAt, cg?, status?} }
 //          (only patients securely linked to this doctor after registration; status is optional and,
 //           when sent, must be calculated by the backend's clinical rules)
