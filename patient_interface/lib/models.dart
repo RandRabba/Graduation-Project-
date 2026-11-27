@@ -81,6 +81,7 @@ class GlucoseReading {
     required this.source,
     this.sensor,
     this.note,
+    this.timing,
   });
 
   factory GlucoseReading.fromJson(Map<String, dynamic> j) => GlucoseReading(
@@ -90,6 +91,7 @@ class GlucoseReading {
     source: j['source'] ?? 'manual',
     sensor: j['sensor'],
     note: j['note'],
+    timing: j['timing'],
   );
 
   final String id, source;
@@ -98,6 +100,10 @@ class GlucoseReading {
   final double value;
   final DateTime at;
   final String? sensor, note;
+
+  /// When a manual reading was taken: one of `kReadingTypes` in manual_reading.dart
+  /// (`fasting`, `before_meal`, `after_meal`, `random`). Null when not chosen.
+  final String? timing;
 }
 
 class AlertItem {

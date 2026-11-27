@@ -37,7 +37,7 @@ Field names are camelCase. Times are Firestore timestamps.
 |---|---|---|
 | `users/{uid}` | the account owner | `role` (`patient` or `caregiver`; `doctor` is added by hand), `email` (lower case), `fullName`, `phone`, `dateOfBirth`, `diabetesType`, `doctorId`, `createdAt` |
 | `links/{caregiverEmail}` | the patient | `patientUid`, `caregiverEmail`, `status` (`pending` until the caregiver registers, then `active`), `shareGlucose`, `createdAt`, `caregiverUid`, `claimedAt` |
-| `patients/{uid}/readings/{id}` | the patient | `value`, `takenAt`, `source`, `sensor`, `note` (to be aligned with the app when the data layer is connected) |
+| `patients/{uid}/readings/{id}` | the patient | `value` (mg/dL), `at` (timestamp of the measurement), `source` (`manual`, `dexcom`, ...), `sensor`, `note`, `timing` (`fasting`, `before_meal`, `after_meal`, `random`), `createdAt`. The id is `<source>-<unix seconds>`, so the same reading cannot be stored twice |
 | `patients/{uid}/reminders/{id}` | the patient | as the patient app's `Reminder` (`assignedBy` marks doctor reminders) |
 | `patients/{uid}/alerts/{id}` | the patient | the patient's own notification history |
 | `caregiverNotifications/{id}` | the patient app, one per caregiver | `patientUid`, `caregiverEmail`, `kind`, `glucose`, `message`, `createdAt`, `read` (the caregiver can only change `read`) |
@@ -67,6 +67,11 @@ The patient app signs up with Firebase Auth and creates `users/{uid}` with
 button adds a `caregiverNotifications` document (`kind: sos`). Run it with
 the same Firebase project: copy `lib/firebase_options.dart` from the caregiver
 app, or run `flutterfire configure` in the patient app.
+
+Glucose readings (manual entries) are written to `patients/{uid}/readings`.
+The caregiver app listens to the newest 500 of them while `shareGlucose` is
+true and builds the latest reading, the history, the chart and the summary
+from them. Alerts, reminders and reports are not connected yet.
 
 A caregiver email and a patient email must be different accounts: one email is
 one Firebase account.

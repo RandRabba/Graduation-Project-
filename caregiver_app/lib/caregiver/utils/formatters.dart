@@ -1,19 +1,35 @@
 import '../l10n/app_strings.dart';
 import '../models/models.dart';
 
-/// Fixed "now" for the mock data so the demo reads the same on any day.
+/// The "now" the screens use. Fixed for the mock data so the demo reads the
+/// same on any day; the real time once real data is connected ([live]).
 class MockClock {
   const MockClock._();
 
-  static final DateTime now = DateTime(2026, 10, 30, 8, 30);
+  static final DateTime _demoNow = DateTime(2026, 10, 30, 8, 30);
+
+  /// Set by the Firebase repository: real readings are dated in real time.
+  static bool live = false;
+
+  static DateTime get now => live ? DateTime.now() : _demoNow;
 }
 
 String _two(int n) => n.toString().padLeft(2, '0');
 
 String hhmm(DateTime d) => '${_two(d.hour)}:${_two(d.minute)}';
 
-String monthDay(DateTime d, AppStrings s) =>
-    s.arabic ? '${d.day} أكتوبر' : 'Oct ${d.day}';
+const List<String> _monthsEn = <String>[
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+const List<String> _monthsAr = <String>[
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+];
+
+String monthDay(DateTime d, AppStrings s) => s.arabic
+    ? '${d.day} ${_monthsAr[d.month - 1]}'
+    : '${_monthsEn[d.month - 1]} ${d.day}';
 
 /// "Today, 08:12", "Yesterday, 21:40" or "Oct 28, 22:00".
 String whenLabel(DateTime t, AppStrings s) {

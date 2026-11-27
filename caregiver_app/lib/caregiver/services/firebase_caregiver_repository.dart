@@ -1,20 +1,28 @@
 import 'package:flutter/foundation.dart' show Listenable;
 
 import '../models/models.dart';
+import '../utils/formatters.dart' show MockClock;
 import 'caregiver_repository.dart';
 import 'firebase_caregiver_session.dart';
+import 'glucose_math.dart';
 
 /// Real data for the Caregiver module, read through [FirebaseCaregiverSession].
 ///
 /// What is connected: the caregiver's own profile, the linked patient's
-/// profile, and the loading / error / "no linked patient" states.
+/// profile, the loading / error / "no linked patient" states, and the
+/// patient's glucose readings with the chart and summary built from them
+/// (only while the patient shares glucose).
 ///
-/// Not connected yet: readings, notifications, reminders, reports. They stay
-/// empty here, so the screens show their empty states instead of invented
-/// numbers. They are connected next, after the data shown to a caregiver is
-/// decided (see `firebase/README.md` for the planned collections).
+/// Not connected yet: alerts, reminders, reports, HbA1c and doctor
+/// instructions. They stay empty here, so the screens show their empty states
+/// instead of invented numbers (see `firebase/README.md` for the planned
+/// collections).
 class FirebaseCaregiverRepository implements CaregiverRepository {
-  FirebaseCaregiverRepository(this._session);
+  FirebaseCaregiverRepository(this._session) {
+    // Real readings carry real dates: "today", "5 min ago" and month names must
+    // use the real clock, not the fixed demo one.
+    MockClock.live = true;
+  }
 
   final FirebaseCaregiverSession _session;
 
@@ -42,8 +50,25 @@ class FirebaseCaregiverRepository implements CaregiverRepository {
     status: PatientStatus.normal,
   );
 
+  /// The patient's profile, with the status taken from the latest reading.
   @override
-  Patient get patient => _session.patient ?? _noPatient;
+  Patient get patient {
+    final Patient? p = _session.patient;
+    if (p == null) return _noPatient;
+    final PatientStatus status = statusFromLatest(
+      _session.readings.isEmpty ? null : _session.readings.first,
+    );
+    if (status == p.status) return p;
+    return Patient(
+      name: p.name,
+      initials: p.initials,
+      diabetesType: p.diabetesType,
+      doctorName: p.doctorName,
+      clinic: p.clinic,
+      emergencyContact: p.emergencyContact,
+      status: status,
+    );
+  }
 
   @override
   CaregiverProfile get caregiver => _session.profile ?? _noProfile;
@@ -80,28 +105,38 @@ class FirebaseCaregiverRepository implements CaregiverRepository {
   Future<void> saveCaregiverProfile({required String name, required String phone}) =>
       _session.saveProfile(name: name, phone: phone);
 
+  // ---- Readings ---------------------------------------------------------------
+
+  @override
+  GlucoseReading? latestReading({required bool stale}) =>
+      _session.readings.isEmpty ? null : _session.readings.first;
+
+  @override
+  List<GlucoseReading> readingHistory(AccessLevel level) => _session.readings;
+
+  @override
+  ChartSeries? chart(AccessLevel level, ChartRange range) =>
+      buildChart(_session.readings, range, DateTime.now());
+
+  @override
+  RangeStats? rangeStats(AccessLevel level, ChartRange range) =>
+      buildStats(_session.readings, range, DateTime.now());
+
+  @override
+  GlucoseReading? readingForAlert(CaregiverAlert alert) {
+    for (final GlucoseReading r in _session.readings) {
+      if (r.id == alert.relatedReadingId) return r;
+    }
+    return null;
+  }
+
   // ---- Not connected yet -----------------------------------------------------
-
-  @override
-  GlucoseReading? latestReading({required bool stale}) => null;
-
-  @override
-  List<GlucoseReading> readingHistory(AccessLevel level) => const <GlucoseReading>[];
 
   @override
   HbA1cRecord? hba1c(AccessLevel level) => null;
 
   @override
   List<CaregiverAlert> alerts(AccessLevel level) => const <CaregiverAlert>[];
-
-  @override
-  GlucoseReading? readingForAlert(CaregiverAlert alert) => null;
-
-  @override
-  ChartSeries? chart(AccessLevel level, ChartRange range) => null;
-
-  @override
-  RangeStats? rangeStats(AccessLevel level, ChartRange range) => null;
 
   @override
   List<HealthReport> reports(AccessLevel level, ReportPeriod period) => const <HealthReport>[];

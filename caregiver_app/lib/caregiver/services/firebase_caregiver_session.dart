@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import 'caregiver_auth.dart';
+import 'glucose_math.dart';
 
 /// Where the signed-in caregiver stands with a patient.
 enum LinkPhase { signedOut, loading, linked, noPatient, error }
@@ -33,12 +34,17 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
   CaregiverProfile? profile;
   Patient? patient;
 
-  /// The patient's uid, and whether they share glucose history. Used when the
-  /// readings are connected.
+  /// The patient's uid, and whether they share glucose history.
   String? patientUid;
   bool shareGlucose = false;
 
+  /// The patient's readings, newest first. Empty while the patient does not
+  /// share glucose (the Firestore rules refuse the read in that case).
+  List<GlucoseReading> readings = const <GlucoseReading>[];
+
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _linkSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _readingsSub;
+  String? _watchedReadingsPid;
   String? _loadedPatientUid;
   bool _disposed = false;
 
@@ -260,6 +266,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
         patientUid = null;
         shareGlucose = false;
         _loadedPatientUid = null;
+        _watchReadings();
         _setPhase(LinkPhase.noPatient);
         return;
       }
@@ -286,10 +293,61 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
       }
       patientUid = pid;
       shareGlucose = link['shareGlucose'] == true;
+      _watchReadings();
       _setPhase(LinkPhase.linked);
     } on FirebaseException {
       _setPhase(LinkPhase.error);
     }
+  }
+
+  /// Listens to the patient's readings while the patient shares glucose, and
+  /// stops when the link ends or sharing is switched off. Keeps the newest 500.
+  void _watchReadings() {
+    final String? pid = shareGlucose ? patientUid : null;
+    if (pid == _watchedReadingsPid) return;
+    _readingsSub?.cancel();
+    _readingsSub = null;
+    _watchedReadingsPid = pid;
+    readings = const <GlucoseReading>[];
+    if (pid == null) return;
+    _readingsSub = _db
+        .collection('patients')
+        .doc(pid)
+        .collection('readings')
+        .orderBy('at', descending: true)
+        .limit(500)
+        .snapshots()
+        .listen(
+      (QuerySnapshot<Map<String, dynamic>> snap) {
+        final List<GlucoseReading> list = <GlucoseReading>[];
+        for (final QueryDocumentSnapshot<Map<String, dynamic>> d in snap.docs) {
+          final GlucoseReading? r = _readingFrom(d.id, d.data());
+          if (r != null) list.add(r);
+        }
+        readings = list;
+        _notify();
+      },
+      onError: (Object _) {
+        readings = const <GlucoseReading>[];
+        _notify();
+      },
+    );
+  }
+
+  /// A reading document written by the patient app; null when it is malformed.
+  static GlucoseReading? _readingFrom(String id, Map<String, dynamic> d) {
+    final Object? value = d['value'];
+    final Object? at = d['at'];
+    if (value is! num || at is! Timestamp) return null;
+    final Object? source = d['source'];
+    final Object? timing = d['timing'];
+    return caregiverReading(
+      id: id,
+      value: value.toDouble(),
+      time: at.toDate(),
+      source: source is String ? source : 'manual',
+      timing: timing is String ? timing : null,
+    );
   }
 
   Future<void> _clear() async {
@@ -300,6 +358,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
     patientUid = null;
     shareGlucose = false;
     _loadedPatientUid = null;
+    _watchReadings();
     await _auth.signOut();
     _setPhase(LinkPhase.signedOut);
   }
@@ -317,6 +376,7 @@ class FirebaseCaregiverSession extends ChangeNotifier implements CaregiverAuth {
   void dispose() {
     _disposed = true;
     _linkSub?.cancel();
+    _readingsSub?.cancel();
     super.dispose();
   }
 

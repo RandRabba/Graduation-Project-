@@ -61,6 +61,7 @@ class _ManualReadingCardState extends State<ManualReadingCard> {
           at: at,
           source: 'manual',
           note: typeLabel,
+          timing: _type,
         ),
       ]);
       if (!mounted) return;

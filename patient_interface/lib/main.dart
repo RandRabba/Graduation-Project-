@@ -7,8 +7,8 @@ import 'app_state.dart';
 import 'auth.dart';
 import 'auth_screen.dart';
 import 'common.dart';
-import 'demo_data.dart';
 import 'firebase_options.dart';
+import 'firestore_repositories.dart';
 import 'l10n.dart';
 import 'meals_screen.dart';
 import 'notifications.dart';
@@ -31,7 +31,8 @@ class CgmApp extends StatefulWidget {
   final AuthSession? auth;
   final ReminderScheduler? scheduler;
 
-  /// Reminders, glucose, alerts and doctor chat. By default: the example records in demo_data.dart.
+  /// Reminders, glucose, alerts and doctor chat. By default: glucose readings are stored in
+  /// Firestore; the rest are still the example records in demo_data.dart.
   final Repositories? repos;
 
   @override
@@ -48,7 +49,7 @@ class _CgmAppState extends State<CgmApp> {
   final _caregiver = CaregiverAssignment();
   final _nav = GlobalKey<NavigatorState>();
   late final _auth = widget.auth ?? AuthSession();
-  late final _repos = widget.repos ?? demoRepositories();
+  late final _repos = widget.repos ?? firebaseRepositories();
   late final _inbox = AlertInbox(_repos.alerts);
   late final _reminders = ReminderList(
     _repos.reminders,
