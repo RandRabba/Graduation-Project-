@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.firebase import (
     initialize_firebase,
@@ -19,6 +21,19 @@ app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan,
 )
+
+# The doctor dashboard is a separate web page, so the browser needs permission
+# to call this API from its address (settings.CORS_ORIGINS, never "*": the
+# dashboard sends credentials).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")

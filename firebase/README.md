@@ -35,12 +35,13 @@ Field names are camelCase. Times are Firestore timestamps.
 
 | Path | Written by | Fields |
 |---|---|---|
-| `users/{uid}` | the account owner | `role` (`patient` or `caregiver`; `doctor` is added by hand), `email` (lower case), `fullName`, `phone`, `dateOfBirth`, `diabetesType`, `doctorId`, `createdAt` |
+| `users/{uid}` | the account owner | `role` (`patient` or `caregiver`; `doctor` is created with `backend/scripts/make_doctor.py`), `email` (lower case), `fullName`, `phone`, `dateOfBirth`, `diabetesType`, `doctorId`, `createdAt` |
 | `links/{caregiverEmail}` | the patient | `patientUid`, `caregiverEmail`, `status` (`pending` until the caregiver registers, then `active`), `shareGlucose`, `createdAt`, `caregiverUid`, `claimedAt` |
 | `patients/{uid}/readings/{id}` | the patient | `value` (mg/dL), `at` (timestamp of the measurement), `source` (`manual`, `dexcom`, ...), `sensor`, `note`, `timing` (`fasting`, `before_meal`, `after_meal`, `random`), `createdAt`. The id is `<source>-<unix seconds>`, so the same reading cannot be stored twice |
 | `patients/{uid}/reminders/{id}` | the patient | as the patient app's `Reminder` (`assignedBy` marks doctor reminders) |
 | `patients/{uid}/alerts/{id}` | the patient | the patient's own alert history: `type` (`critical_low`, `low`, `high`, `critical_high`), `message`, `at`, `read`, `glucose`, `readingAt`, `caregiverNotified`, `createdAt`. The id is the id of the reading that raised it |
 | `caregiverNotifications/{id}` | the patient app, one per caregiver | `patientUid`, `caregiverEmail`, `kind` (`critical_low`, `critical_high`, `sos`), `readingId`, `readingAt`, `glucose` (only when the patient shares glucose), `message`, `createdAt`, `read` (the caregiver can only change `read`). A glucose notification has the id `<patientUid>_<readingId>` |
+| `doctors/{doctorUid}/patients/{patientUid}` | the backend only (scripts today) | `patientUid`, `patientEmail`, `linkedAt`. "This doctor follows this patient." The rules never match `doctors/...`, so no app can read or write it |
 
 The id of a `links` document is the caregiver's **lower-case email**.
 
@@ -101,9 +102,11 @@ caregiver from the app.)
 - **Push when the app is closed** needs Cloud Functions + FCM, which need the
   Blaze plan. Until then the caregiver sees notifications live while the app
   is open.
-- **Doctor website**: a PHP page cannot use these client rules. It will talk to
-  Firebase through the Admin SDK on the server (which bypasses the rules), so
-  its own access checks live in that PHP code.
+- **Doctor website**: it cannot use these client rules. It calls the FastAPI
+  backend (`backend/`) with the doctor's Firebase ID token. The backend uses the
+  Admin SDK, which bypasses the rules, so its own checks are in `backend/app/auth`
+  (the token and the `doctor` role) and `backend/app/access` (only the doctor's
+  linked patients).
 - One caregiver email follows one patient.
 - The rules could not be run against the emulator here. Check them with
   `firebase deploy --only firestore`, then try the flow above.
