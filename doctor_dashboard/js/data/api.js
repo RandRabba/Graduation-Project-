@@ -22,6 +22,8 @@ import { makeLinkCode, LINK_CODE_RE } from '../core/linkcode.js';
 
 const MOCK = CONFIG.dataSource !== 'api';
 export const TEST_ON = MOCK && CONFIG.testMode;
+// True when the data comes from the FastAPI backend and the doctor signs in (js/data/auth.js)
+export const API_MODE = !MOCK;
 // Shown next to anything the Patient App will receive once the backend exists
 export const SYNC_READY = false;
 
@@ -203,10 +205,13 @@ export async function deleteReminder(id) {
 const DOC_DEFAULT = { name: CONFIG.doctorName, spec: '', hosp: '', email: '', phone: '', loc: '', joined: null, status: null,
   unit: 'mg/dL', notif: { crit: 1, msg: 1, rem: 1, req: 1, fu: 1, email: 0 }, photo: 'default', pw: null };
 export const DEFAULT_PHOTO = 'assets/img/doctor.png';
-export function getDoctor() { return { ...DOC_DEFAULT, ...(local.get('dms-doctor', {}) ?? {}), lang: LANG }; }
+// With the backend the name and email come from the signed-in account (loaded with the first page data, see loadFromApi);
+// what the doctor edits in the profile is kept in this browser and wins
+const fromBackend = () => (raw?.doctor ? { name: raw.doctor.name, email: raw.doctor.email } : {});
+export function getDoctor() { return { ...DOC_DEFAULT, ...fromBackend(), ...(local.get('dms-doctor', {}) ?? {}), lang: LANG }; }
 export async function saveDoctor(fields) {
   const d = { ...(local.get('dms-doctor', {}) ?? {}), ...fields };
-  if (!MOCK) await http.put('/doctor', d);
+  // TODO(backend): store the profile with PUT /doctor (not implemented yet); until then it stays in this browser
   local.set('dms-doctor', d);
 }
 export function docPhoto(d = getDoctor()) { return d.photo === 'default' ? DEFAULT_PHOTO : (d.photo || ''); }

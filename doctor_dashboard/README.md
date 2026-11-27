@@ -18,6 +18,16 @@ Tests (Node 18 or later, nothing to install):
 npm test
 ```
 
+## Using the backend (doctor sign-in)
+
+With `dataSource: 'api'` in `js/config.js` the dashboard reads from the FastAPI backend instead of test data, and
+every page first asks the doctor to sign in (`login.html`, Firebase email and password, `js/data/auth.js`). The
+sign-in lives in this browser tab (sessionStorage) and ends with **Sign out** in Profile > Security, or when the tab
+closes. The default stays `'mock'`. How to start the backend and what it answers today: `backend/README.md`.
+
+Not connected yet (these fail or stay empty with the backend): consultations, prescriptions, instructions, chat,
+reviewing alerts, reports, reminders and link codes. Patient ids are the numbers the backend gives (1, 2, 3...).
+
 ## Pages
 
 | Page | File | Script |

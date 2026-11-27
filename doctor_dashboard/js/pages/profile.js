@@ -5,11 +5,13 @@ import { t, tt, tv, ldate, DF, LANG, setLang } from '../core/i18n.js';
 import { $, $$, h, ic } from '../core/dom.js';
 import { setFlash, takeFlash } from '../core/storage.js';
 import { setTheme } from '../core/theme.js';
-import { getPatients, getDoctor, saveDoctor, docPhoto } from '../data/api.js';
+import { getPatients, getDoctor, saveDoctor, docPhoto, API_MODE } from '../data/api.js';
+import { signOut } from '../data/auth.js';
 import { go } from '../ui/nav.js';
 import { docAvatar } from '../ui/components.js';
 
-const d = getDoctor(), flash = takeFlash(), nPatients = Object.keys(await getPatients()).length;
+// The patients first: with the backend, the doctor's name arrives with that data (getDoctor)
+const nPatients = Object.keys(await getPatients()).length, d = getDoctor(), flash = takeFlash();
 const F = [['name', 'text'], ['spec', 'text'], ['hosp', 'text'], ['email', 'email'], ['phone', 'tel'], ['loc', 'text']];
 const TABS = { 't-info': 'prof.tab.info', 't-sec': 'prof.tab.sec', 't-not': 'prof.tab.not', 't-pref': 'prof.tab.pref' };
 const meta = Object.entries({ building: d.hosp, pin: d.loc, mail: d.email }).filter(([, v]) => v !== '');
@@ -62,6 +64,10 @@ await mount({ page: 'profile', title: t('nav.profile'), heading: t('nav.profile'
       <small class="hint">${tt('prof.pw.hint')}</small>
       <div class="pact"><button type="submit" class="btn">${tt('prof.pw.btn')}</button></div>
     </form>
+    ${API_MODE ? `<div class="pform one editing so">
+      <p class="hint">${tt('prof.signout_hint')}</p>
+      <div class="pact"><button type="button" class="btn ghost" id="signout">${tt('prof.signout')}</button></div>
+    </div>` : ''}
   </section>
 
   <section class="tab" id="t-not" hidden>
@@ -128,6 +134,10 @@ pinfo.onsubmit = async e => {
   await saveDoctor(v);
   done('prof.msg.updated', 't-info');
 };
+
+// Sign out (only with the backend: the sign-in lives in this tab)
+const so = $('#signout');
+if (so) so.onclick = () => { signOut(); location.replace('login.html'); };
 
 // There is no real password before sign-in is connected to the backend, so a made-up one isn't checked
 $('#pw').onsubmit = e => {

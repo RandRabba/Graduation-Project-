@@ -41,11 +41,20 @@ def test_make_doctor_creates_account_and_profile(db, accounts, monkeypatch):
     assert "createdAt" in profile
 
 
-def test_make_doctor_rejects_mismatched_password(db, accounts, monkeypatch):
+def test_make_doctor_rejects_mismatched_password(db, accounts, monkeypatch, capsys):
     answers = iter(["secret123", "different"])
     monkeypatch.setattr(make_doctor.getpass, "getpass", lambda prompt="": next(answers))
     assert make_doctor.main(["new.doc@example.com", "Dr. New"]) == 1
     assert accounts == []
+    assert "different" in capsys.readouterr().out
+
+
+def test_make_doctor_rejects_short_password_and_says_so(db, accounts, monkeypatch, capsys):
+    answers = iter(["abc", "abc"])
+    monkeypatch.setattr(make_doctor.getpass, "getpass", lambda prompt="": next(answers))
+    assert make_doctor.main(["new.doc@example.com", "Dr. New"]) == 1
+    assert accounts == []
+    assert "3 characters" in capsys.readouterr().out
 
 
 def test_make_doctor_is_repeatable_for_a_doctor(db, accounts):
@@ -59,9 +68,14 @@ def test_make_doctor_never_changes_a_patient(db, accounts):
     assert db.collection("users").document("p1").get().to_dict()["role"] == "patient"
 
 
-def test_link_patient_and_remove(db, accounts):
+def test_link_patient_and_remove(db, accounts, capsys):
+    db.collection("doctors").document("doc1").collection("patients").document("p1").delete()
     assert link_patient.main(["roa@example.com", "sobhi@example.com"]) == 0
-    assert db.collection("doctors").document("doc1").collection("patients").document("p1").get().exists
+    link = db.collection("doctors").document("doc1").collection("patients").document("p1").get()
+    assert link.exists and link.to_dict()["seq"] == 2  # number 1 was used before: not handed out again
+    assert "patient number 2" in capsys.readouterr().out
+    assert link_patient.main(["roa@example.com", "sobhi@example.com"]) == 0  # again: nothing changes
+    assert "was already linked" in capsys.readouterr().out
     assert link_patient.main(["roa@example.com", "sobhi@example.com", "--remove"]) == 0
     assert not db.collection("doctors").document("doc1").collection("patients").document("p1").get().exists
 

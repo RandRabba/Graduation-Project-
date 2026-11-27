@@ -1024,3 +1024,11 @@ h2.hinfo{display:flex;align-items:center;gap:6px}
 .lc-mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.03em}
 .lc-btns{display:flex;gap:6px}
 .lc-list .lc-none{text-align:start;padding:4px 0}
+
+/* Sign-in page (login.html): one centered column instead of the sidebar grid */
+body.login-page{display:block}
+.login{max-width:420px;margin:12vh auto 0;padding:0 18px;display:flex;flex-direction:column;gap:14px}
+.login .brand{display:flex;align-items:center;gap:10px}
+.login h1{margin:6px 0 0;font-size:22px}
+.login .hint{margin:0;color:var(--mute)}
+.login .btn{text-decoration:none}

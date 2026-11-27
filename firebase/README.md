@@ -41,7 +41,7 @@ Field names are camelCase. Times are Firestore timestamps.
 | `patients/{uid}/reminders/{id}` | the patient | as the patient app's `Reminder` (`assignedBy` marks doctor reminders) |
 | `patients/{uid}/alerts/{id}` | the patient | the patient's own alert history: `type` (`critical_low`, `low`, `high`, `critical_high`), `message`, `at`, `read`, `glucose`, `readingAt`, `caregiverNotified`, `createdAt`. The id is the id of the reading that raised it |
 | `caregiverNotifications/{id}` | the patient app, one per caregiver | `patientUid`, `caregiverEmail`, `kind` (`critical_low`, `critical_high`, `sos`), `readingId`, `readingAt`, `glucose` (only when the patient shares glucose), `message`, `createdAt`, `read` (the caregiver can only change `read`). A glucose notification has the id `<patientUid>_<readingId>` |
-| `doctors/{doctorUid}/patients/{patientUid}` | the backend only (scripts today) | `patientUid`, `patientEmail`, `linkedAt`. "This doctor follows this patient." The rules never match `doctors/...`, so no app can read or write it |
+| `doctors/{doctorUid}/patients/{patientUid}` | the backend only (scripts today) | `patientUid`, `patientEmail`, `linkedAt`, `seq` (the patient's number for this doctor, the id the dashboard uses). "This doctor follows this patient." `doctors/{doctorUid}.lastSeq` is the last number given out. The rules never match `doctors/...`, so no app can read or write it |
 
 The id of a `links` document is the caregiver's **lower-case email**.
 

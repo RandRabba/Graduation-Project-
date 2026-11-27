@@ -36,7 +36,8 @@ def db():
                           "diabetesType": "Type 1", "dateOfBirth": "1990-06-15"})
     d.put("users", "p2", {"role": "patient", "email": "other@example.com", "fullName": "Other"})
     d.put("users", "care1", {"role": "caregiver", "email": "care@example.com"})
-    d.put("doctors", "doc1", "patients", "p1", {"patientUid": "p1", "linkedAt": T0})
+    d.put("doctors", "doc1", {"lastSeq": 1})
+    d.put("doctors", "doc1", "patients", "p1", {"patientUid": "p1", "linkedAt": T0, "seq": 1})
     d.put("patients", "p1", "readings", "manual-1", {"value": 105, "at": T1, "source": "manual", "timing": "fasting"})
     d.put("patients", "p1", "readings", "dexcom-2", {"value": 260.0, "at": T2, "source": "dexcom"})
     d.put("patients", "p1", "readings", "broken-3", {"at": T0, "source": "manual"})  # no value

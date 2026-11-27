@@ -1,4 +1,4 @@
-"""Which patients a doctor may open."""
+"""Which patients a doctor may open (the doctor's own numbers only)."""
 
 from fastapi import Depends, HTTPException, Path, status
 
@@ -13,15 +13,16 @@ def get_repository(db=Depends(get_db)) -> DoctorRepository:
 
 
 def linked_patient_uid(
-    patient_uid: str = Path(min_length=1, max_length=128),
+    patient_id: int = Path(ge=1, le=2**31 - 1, description="The patient's number for this doctor"),
     doctor: CurrentUser = Depends(require_doctor),
     repo: DoctorRepository = Depends(get_repository),
 ) -> str:
-    """The patient's uid, only if this doctor follows the patient.
+    """The Firebase uid of this doctor's patient number ``patient_id``.
 
-    Answers 404 (not 403) for any other patient, so a doctor cannot find out
-    which accounts exist.
+    The number belongs to the calling doctor, so a number that is not theirs
+    answers 404 exactly like a patient that does not exist.
     """
-    if not repo.is_linked(doctor.uid, patient_uid):
+    uid = repo.patient_uid_for(doctor.uid, patient_id)
+    if uid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-    return patient_uid
+    return uid

@@ -1,7 +1,8 @@
 """Link a patient to a doctor (or remove the link).
 
 Until the link-code flow exists, this is how a doctor gets patients. It writes
-doctors/{doctorUid}/patients/{patientUid}, which only the backend can read.
+doctors/{doctorUid}/patients/{patientUid}, which only the backend can read, and
+gives the patient a number for this doctor (the id the dashboard uses).
 
 Run from the backend folder, with the virtual environment active:
 
@@ -55,8 +56,9 @@ def main(argv: list[str] | None = None) -> int:
         repo.unlink(doctor_uid, patient_uid)
         print(f"{patient_email} is no longer linked to {doctor_email}.")
     else:
-        repo.link(doctor_uid, patient_uid, patient_email)
-        print(f"{patient_email} is now linked to {doctor_email}.")
+        seq, created = repo.link(doctor_uid, patient_uid, patient_email)
+        what = "is now linked to" if created else "was already linked to"
+        print(f"{patient_email} {what} {doctor_email} as patient number {seq}.")
     return 0
 
 

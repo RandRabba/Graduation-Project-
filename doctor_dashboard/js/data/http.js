@@ -1,6 +1,13 @@
-// HTTP client for the future FastAPI backend (used only when CONFIG.dataSource === 'api').
-// THE BACKEND IS NOT IMPLEMENTED YET. Nothing is synchronized with the Patient App and there is no secure
-// sign-in until it is. These are the endpoints the frontend expects; every response uses the same data shapes
+// HTTP client for the FastAPI backend (used only when CONFIG.dataSource === 'api').
+// Every request carries the signed-in doctor's Firebase ID token (js/data/auth.js). Without one the browser goes to
+// login.html; a 401 answer signs the doctor out and goes there too.
+//
+// WHAT THE BACKEND ANSWERS TODAY (backend/README.md): GET /doctor, GET /patients (patient ids are small whole numbers,
+// one sequence per doctor), GET /patients/{id}/readings, and an empty list for meals, consultations, doses, requests,
+// instructions, chat and /reminders. Everything else below is NOT implemented yet: the doctor's actions (consultations,
+// instructions, chat, reviewing alerts, reports, reminders), link codes and /protocols. Those requests fail, and
+// nothing is synchronized with the Patient App until they exist.
+// These are the endpoints the frontend expects; every response uses the same data shapes
 // as the mock data (js/data/mock/sample-data.js). Timestamps are Unix seconds.
 //
 //   GET    /doctor                                  doctor profile          PUT /doctor
@@ -34,14 +41,15 @@
 //   POST   /patients/{id}/reports/{rid}/seen
 //   GET    /protocols                               clinically approved protocols (replaces core/protocols.js defaults)
 import { CONFIG } from '../config.js';
+import { getIdToken, signOut, redirectToLogin } from './auth.js';
 
 async function request(method, path, body) {
-  const res = await fetch(CONFIG.apiBaseUrl + path, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include',
-  });
+  const token = await getIdToken();
+  if (!token) return redirectToLogin();
+  const headers = { Authorization: `Bearer ${token}` };
+  if (body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(CONFIG.apiBaseUrl + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 401) { signOut(); return redirectToLogin(); }
   if (!res.ok) throw new Error(`${method} ${path}: ${res.status}`);
   return res.status === 204 ? null : res.json();
 }
@@ -54,10 +62,10 @@ export const http = {
 
 // Raw dataset in the same shape as buildSampleData(), loaded from the API
 export async function loadFromApi() {
-  const patients = await http.get('/patients');
+  const [doctor, patients] = await Promise.all([http.get('/doctor'), http.get('/patients')]);
   const ids = Object.keys(patients);
   const per = async path => Object.fromEntries(await Promise.all(ids.map(async id => [id, await http.get(`/patients/${id}/${path}`)])));
   const [readings, meals, consultations, doses, requests, ins, chat, reminders] = await Promise.all([
     per('readings'), per('meals'), per('consultations'), per('doses'), per('requests'), per('instructions'), per('chat'), http.get('/reminders')]);
-  return { patients, readings, meals, consultations, doses, requests, ins, chat, reminders };
+  return { doctor, patients, readings, meals, consultations, doses, requests, ins, chat, reminders };
 }

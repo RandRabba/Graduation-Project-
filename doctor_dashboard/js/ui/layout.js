@@ -22,8 +22,8 @@ export async function mount(opts, body) {
   root.lang = LANG; root.dir = DIR;
   if (TEST_ON) root.dataset.mode = 'test';
   document.title = 'DMS · ' + opts.title;
-  const doc = getDoctor();
   const counts = { reports: await newReports(), missed: await missedReminders(), open: await openNotifications() };
+  const doc = getDoctor();   // after the data: with the backend the doctor's name arrives with it
   const mini = root.dataset.side === 'mini';
   // A link: icon, label (kept for screen readers when collapsed), optional count badge; data-tip = collapsed tooltip
   const link = ([k, i, href, c]) => { const n = c ? counts[c] : 0, on = k === opts.page;

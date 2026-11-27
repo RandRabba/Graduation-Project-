@@ -60,13 +60,38 @@ def test_patient_out_without_profile_fields():
     assert s.patient_out(None, {}).name == "Patient"
 
 
-def test_link_and_unlink():
+def test_link_numbers_patients_and_never_reuses_a_number():
     repo = DoctorRepository(FakeFirestore())
-    assert not repo.is_linked("d", "p")
+    assert repo.link("d", "a", "a@example.com")[0] == 1
+    assert repo.link("d", "b", "b@example.com")[0] == 2
+    assert repo.link("d", "a", "a@example.com") == (1, False)  # already linked: unchanged
+    repo.unlink("d", "b")
+    assert repo.link("d", "c", "c@example.com") == (3, True)  # 2 is not handed out again
+    assert repo.link("other", "a", "a@example.com") == (1, True)  # numbers are per doctor
+
+
+def test_patient_uid_for_and_unlink():
+    repo = DoctorRepository(FakeFirestore())
     repo.link("d", "p", "p@example.com")
-    assert repo.is_linked("d", "p")
+    assert repo.patient_uid_for("d", 1) == "p"
+    assert repo.patient_uid_for("d", 2) is None
+    assert repo.patient_uid_for("someone-else", 1) is None
     [link] = repo.linked_patients("d")
-    assert link["id"] == "p" and link["patientEmail"] == "p@example.com"
+    assert link["id"] == "p" and link["patientEmail"] == "p@example.com" and link["seq"] == 1
     assert isinstance(link["linkedAt"], datetime)
     repo.unlink("d", "p")
-    assert not repo.is_linked("d", "p")
+    assert repo.patient_uid_for("d", 1) is None
+
+
+def test_old_links_without_a_number_get_one_oldest_first():
+    db = FakeFirestore()
+    early = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    late = datetime(2026, 11, 20, tzinfo=timezone.utc)
+    db.put("doctors", "d", "patients", "later", {"linkedAt": late})
+    db.put("doctors", "d", "patients", "earlier", {"linkedAt": early})
+    repo = DoctorRepository(db)
+    assert repo.patient_uid_for("d", 1) == "earlier"  # looked up by number: numbers are given out first
+    assert repo.patient_uid_for("d", 2) == "later"
+    # and they stay: asking again changes nothing
+    assert {l["id"]: l["seq"] for l in repo.linked_patients("d")} == {"earlier": 1, "later": 2}
+    assert repo.link("d", "new", "n@example.com")[0] == 3

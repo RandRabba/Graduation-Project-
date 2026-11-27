@@ -23,17 +23,17 @@ def list_patients(
     doctor: CurrentUser = Depends(require_doctor),
     repo: DoctorRepository = Depends(get_repository),
 ):
-    """The patients linked to this doctor, keyed by the patient's uid."""
+    """The patients linked to this doctor, keyed by the patient's number
+    (1, 2, 3... for this doctor; the other routes take the same number)."""
     result: dict[str, PatientOut] = {}
-    for link in repo.linked_patients(doctor.uid):
-        uid = link["id"]
-        result[uid] = doctor_service.patient_out(repo.user_profile(uid), link)
+    for link in sorted(repo.linked_patients(doctor.uid), key=lambda link: link["seq"]):
+        result[str(link["seq"])] = doctor_service.patient_out(repo.user_profile(link["id"]), link)
     return result
 
 
-@router.get("/patients/{patient_uid}/readings", response_model=list[ReadingOut])
+@router.get("/patients/{patient_id}/readings", response_model=list[ReadingOut])
 def patient_readings(
-    patient_uid: str = Depends(linked_patient_uid),
+    patient_uid: str = Depends(linked_patient_uid),  # the number in the URL, as a uid
     repo: DoctorRepository = Depends(get_repository),
     limit: int = Query(500, ge=1, le=2000, description="Newest readings to return"),
     since: int | None = Query(None, ge=0, description="Only readings at or after this Unix time (seconds)"),
@@ -57,7 +57,7 @@ _NOT_STORED_YET = ("meals", "consultations", "doses", "requests", "instructions"
 
 
 def _empty_list_route(name: str) -> None:
-    @router.get(f"/patients/{{patient_uid}}/{name}", response_model=list, name=f"patient_{name}")
+    @router.get(f"/patients/{{patient_id}}/{name}", response_model=list, name=f"patient_{name}")
     def empty(_: str = Depends(linked_patient_uid)):
         return []
 

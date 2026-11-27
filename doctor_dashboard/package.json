@@ -1,1 +1,1 @@
-{ "name": "doctor-dashboard", "private": true, "type": "module", "description": "DMS Doctor Dashboard — static HTML/CSS/JS frontend", "scripts": { "test": "node --test tests/clinical.test.js" } }
+{ "name": "doctor-dashboard", "private": true, "type": "module", "description": "DMS Doctor Dashboard — static HTML/CSS/JS frontend", "scripts": { "test": "node --test tests/clinical.test.js tests/auth.test.js" } }

@@ -1,7 +1,7 @@
 """A tiny in-memory stand-in for the Firestore client.
 
 It supports only what the backend uses: collection/document paths, get, set,
-delete, stream, ``where(filter=FieldFilter(...))``, ``order_by`` and ``limit``.
+delete, stream, ``where(filter=FieldFilter(...))`` (``>=`` and ``==``), ``order_by`` and ``limit``.
 """
 
 from datetime import datetime, timezone
@@ -72,8 +72,11 @@ class FakeQuery:
             if len(path) == n + 1 and path[:n] == self._path
         ]
         for f in self._filters:
-            assert f.op_string == ">=", "the fake only knows >="
-            rows = [r for r in rows if r[1].get(f.field_path) is not None and r[1][f.field_path] >= f.value]
+            assert f.op_string in (">=", "=="), "the fake only knows >= and =="
+            if f.op_string == "==":
+                rows = [r for r in rows if r[1].get(f.field_path) == f.value]
+            else:
+                rows = [r for r in rows if r[1].get(f.field_path) is not None and r[1][f.field_path] >= f.value]
         if self._order:
             field, direction = self._order
             rows.sort(key=lambda r: r[1][field], reverse=direction == "DESCENDING")

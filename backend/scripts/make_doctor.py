@@ -37,8 +37,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Found the existing account {email}.")
     except auth.UserNotFoundError:
         password = getpass.getpass("Password for the new account (at least 6 characters): ")
-        if len(password) < 6 or password != getpass.getpass("Repeat the password: "):
-            print("The passwords are too short or do not match. Nothing was created.")
+        repeated = getpass.getpass("Repeat the password: ")
+        if len(password) < 6:
+            print(f"The password has {len(password)} characters; it needs at least 6. Nothing was created.")
+            return 1
+        if password != repeated:
+            print("The two passwords are different. Nothing was created.")
             return 1
         user = auth.create_user(email=email, password=password, display_name=args.name)
         print(f"Created the account {email}.")
